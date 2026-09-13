@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+//todos fix this background for all page of this app so this is important ask anyone that you know it
+
 /// هاله‌ی آبی که پشت اپ‌بار/بالای صفحه قرار می‌گیره.
 /// این رو دور محتوای هر صفحه با یه Stack می‌پیچونی.
 class AppGlowBackground extends StatelessWidget {
