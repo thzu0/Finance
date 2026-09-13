@@ -131,6 +131,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.18.0"
+  page_transition:
+    dependency: "direct main"
+    description:
+      name: page_transition
+      sha256: "61dac670e80ebdd7da847c21841e1dfd8f9ab483b3a0c5fddc877ad8d23b69ee"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.2.2"
   path:
     dependency: transitive
     description:

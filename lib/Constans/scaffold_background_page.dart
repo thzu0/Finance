@@ -1,0 +1,53 @@
+import 'package:flutter/material.dart';
+
+/// هاله‌ی آبی که پشت اپ‌بار/بالای صفحه قرار می‌گیره.
+/// این رو دور محتوای هر صفحه با یه Stack می‌پیچونی.
+class AppGlowBackground extends StatelessWidget {
+  const AppGlowBackground({
+    super.key,
+    required this.child,
+    this.backgroundColor = const Color(0xFF0A0E27),
+    this.glowColor = const Color(0xFF4682FF),
+    this.glowSize = 380,
+    this.top = -180,
+    this.left = -140,
+  });
+
+  final Widget child;
+  final Color backgroundColor;
+  final Color glowColor;
+  final double glowSize;
+  final double top;
+  final double left;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: backgroundColor,
+      child: Stack(
+        children: [
+          Positioned(
+            top: top,
+            left: left,
+            child: Container(
+              width: glowSize,
+              height: glowSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    glowColor.withOpacity(0.7),
+                    glowColor.withOpacity(0.32),
+                    glowColor.withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.45, 0.72],
+                ),
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
