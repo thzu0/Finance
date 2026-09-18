@@ -2,7 +2,6 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 
 import 'package:finance/widget/build_home_page_container_widget.dart';
-import 'package:finance/widget/custom_bottm_nav_widget.dart';
 
 import 'package:finance/widget/glowAvatar.dart';
 import 'package:finance/widget/icon_appbar_widget.dart';
