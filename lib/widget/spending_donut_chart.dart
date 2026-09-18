@@ -173,7 +173,7 @@ class SpendingLegend extends StatelessWidget {
               Text(
                 '${cat.percent.toInt()}%',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Constans.textSecondary,
                   fontFamily: 'Vazirmatn',
