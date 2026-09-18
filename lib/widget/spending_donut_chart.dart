@@ -22,14 +22,14 @@ class CategoryColorProvider {
   CategoryColorProvider._internal();
 
   final List<Color> _basePalette = const [
-    Color(0xFF2A78D6),
-    Color(0xFFEB6834),
-    Color(0xFF6250D6),
-    Color(0xFFE87BA4),
+    Color.fromARGB(255, 3, 63, 136),
+    Color.fromARGB(255, 241, 71, 4),
+    Color.fromARGB(207, 32, 17, 131),
+    Color.fromARGB(255, 245, 12, 102),
     Color(0xFFEDA100),
-    Color(0xFF1BAF7A),
-    Color(0xFFE34948),
-    Color(0xFF9085E9),
+    Color.fromARGB(255, 17, 218, 147),
+    Color.fromARGB(255, 224, 11, 11),
+    Color.fromARGB(255, 71, 50, 235),
   ];
 
   final Map<String, Color> _assigned = {};
@@ -101,6 +101,7 @@ class SpendingDonutChart extends StatelessWidget {
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
+
             children: [
               Text(
                 centerAmount,
@@ -108,11 +109,16 @@ class SpendingDonutChart extends StatelessWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Constans.textPrimary,
+                  fontFamily: 'Vazirmatn',
                 ),
               ),
               Text(
                 centerLabel,
-                style: TextStyle(fontSize: 12, color: Constans.textSecondary),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Constans.textSecondary,
+                  fontFamily: 'Vazirmatn',
+                ),
               ),
             ],
           ),
@@ -135,33 +141,43 @@ class SpendingLegend extends StatelessWidget {
     final colorProvider = CategoryColorProvider();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+
       children: categories.map((cat) {
         final color = colorProvider.colorFor(cat.label);
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              ),
+              const SizedBox(width: 10),
               Text(
-                '%${cat.percent.toInt()}',
+                cat.label,
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Constans.textSecondary,
+                  fontSize: 18,
+                  color: Constans.textPrimary,
+                  fontFamily: 'Vazirmatn',
                 ),
               ),
               const SizedBox(width: 8),
+
               Text(
-                cat.label,
-                style: TextStyle(fontSize: 12, color: Constans.textPrimary),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+                '${cat.percent.toInt()}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Constans.textSecondary,
+                  fontFamily: 'Vazirmatn',
+                ),
               ),
             ],
           ),
