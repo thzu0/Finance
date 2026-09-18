@@ -1,5 +1,6 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Screen/home_screen.dart';
+import 'package:finance/Screen/root.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
@@ -61,7 +62,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 Navigator.push(
                   context,
                   PageTransition(
-                    child: const HomeScreen(),
+                    child: const RootPage(),
                     type: PageTransitionType.fade,
                   ),
                 );
@@ -145,7 +146,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         context,
                         PageTransition(
                           type: PageTransitionType.fade,
-                          child: const HomeScreen(),
+                          child: const RootPage(),
                         ),
                       );
                     }

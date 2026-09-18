@@ -100,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: AppGlowBackground(
         child: SafeArea(child: BuildHomePage(size: size)),
       ),
-      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 }
