@@ -22,14 +22,14 @@ class CategoryColorProvider {
   CategoryColorProvider._internal();
 
   final List<Color> _basePalette = const [
-    Color.fromARGB(255, 3, 63, 136),
-    Color.fromARGB(255, 241, 71, 4),
-    Color.fromARGB(207, 32, 17, 131),
-    Color.fromARGB(255, 245, 12, 102),
-    Color(0xFFEDA100),
-    Color.fromARGB(255, 17, 218, 147),
-    Color.fromARGB(255, 224, 11, 11),
-    Color.fromARGB(255, 71, 50, 235),
+    Color.fromARGB(255, 31, 130, 249), // آبی جیغ
+    Color.fromARGB(255, 249, 93, 31), // نارنجی جیغ
+    Color.fromARGB(255, 60, 31, 249), // بنفش جیغ
+    Color.fromARGB(255, 249, 31, 115), // صورتی جیغ
+    Color.fromARGB(255, 249, 179, 31), // کهربایی جیغ
+    Color.fromARGB(255, 31, 249, 172), // سبزآبی جیغ
+    Color.fromARGB(255, 249, 31, 31), // قرمز جیغ
+    Color.fromARGB(255, 56, 31, 249), // بنفش/نیلی جیغ
   ];
 
   final Map<String, Color> _assigned = {};
@@ -117,7 +117,7 @@ class SpendingDonutChart extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   color: Constans.textSecondary,
-                  fontFamily: 'Vazirmatn',
+                  fontFamily: 'Lalezar',
                 ),
               ),
             ],
@@ -165,7 +165,7 @@ class SpendingLegend extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   color: Constans.textPrimary,
-                  fontFamily: 'Vazirmatn',
+                  fontFamily: 'Lalezar',
                 ),
               ),
               const SizedBox(width: 8),
@@ -173,7 +173,7 @@ class SpendingLegend extends StatelessWidget {
               Text(
                 '${cat.percent.toInt()}%',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 17,
                   fontWeight: FontWeight.w600,
                   color: Constans.textSecondary,
                   fontFamily: 'Vazirmatn',
@@ -206,10 +206,11 @@ class SpendingOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(flex: 2, child: SpendingLegend(categories: categories)),
+        Expanded(child: SpendingLegend(categories: categories)),
+        SizedBox(width: 30),
         Expanded(
-          flex: 3,
           child: SpendingDonutChart(
             centerAmount: centerAmount,
             categories: categories,

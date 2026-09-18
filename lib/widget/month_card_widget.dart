@@ -47,8 +47,8 @@ class MonthOverviewCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Vazirmatn',
-                  fontSize: 15,
+                  fontFamily: 'Lalezar',
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Constans.textSecondary,
                 ),
@@ -59,7 +59,7 @@ class MonthOverviewCard extends StatelessWidget {
           Text(
             amount,
             style: TextStyle(
-              fontSize: 23,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               fontFamily: 'Vazirmatn',
               color: Constans.textPrimary,
@@ -72,7 +72,7 @@ class MonthOverviewCard extends StatelessWidget {
               Text(
                 percent,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 17,
                   fontFamily: 'Vazirmatn',
                   fontWeight: FontWeight.w600,
                   color: isPositive ? Constans.success : Constans.expense,

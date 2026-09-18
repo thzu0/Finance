@@ -2,6 +2,7 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 
 import 'package:finance/widget/build_home_page_container_widget.dart';
+import 'package:finance/widget/custom_bottm_nav_widget.dart';
 
 import 'package:finance/widget/glowAvatar.dart';
 import 'package:finance/widget/icon_appbar_widget.dart';
@@ -20,7 +21,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
+      backgroundColor: Constans.background,
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: AppBar(
         toolbarHeight: 80,
         backgroundColor: Colors.transparent,
@@ -97,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: AppGlowBackground(
         child: SafeArea(child: BuildHomePage(size: size)),
       ),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 }

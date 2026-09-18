@@ -254,7 +254,7 @@ class BuildHomePage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 0),
             child: Container(
-              height: size.height * 0.275,
+              height: size.height * 0.27,
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -266,18 +266,42 @@ class BuildHomePage extends StatelessWidget {
                 color: Constans.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment
+                    .end, // همون چیزی که تو کارت "این ماه" داشتی
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Text(
+                      'بررسی هزینه‌ها',
+                      style: TextStyle(
+                        fontFamily: 'Vazirmatn',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Constans.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
-                    child: SpendingOverview(
-                      centerAmount: '\$۷۵۰',
-                      categories: const [
-                        SpendingCategory(label: 'غذا و رستوران', percent: 37),
-                        SpendingCategory(label: 'حمل و نقل', percent: 20),
-                        SpendingCategory(label: 'خرید', percent: 16),
-                        SpendingCategory(label: 'سرگرمی', percent: 12),
-                        SpendingCategory(label: 'سایر', percent: 15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        Expanded(
+                          child: SpendingOverview(
+                            centerAmount: '\$۷۵۰',
+                            categories: const [
+                              SpendingCategory(
+                                label: 'غذا و رستوران',
+                                percent: 37,
+                              ),
+                              SpendingCategory(label: 'حمل و نقل', percent: 20),
+                              SpendingCategory(label: 'خرید', percent: 16),
+                              SpendingCategory(label: 'سرگرمی', percent: 12),
+                              SpendingCategory(label: 'سایر', percent: 15),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
