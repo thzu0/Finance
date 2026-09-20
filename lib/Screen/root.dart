@@ -21,7 +21,7 @@ class _RootPageState extends State<RootPage> {
     return [
       HomeScreen(),
       Transactionsscreen(),
-      Budgetscreen(),
+      BudgetScreen(),
       Insightsscreen(),
       Profilescreen(),
     ];
