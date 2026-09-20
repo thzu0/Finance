@@ -213,7 +213,7 @@ class BuildHomePage extends StatelessWidget {
                         child: MonthOverviewCard(
                           icon: Icons.trending_up,
                           label: 'درآمد',
-                          amount: '\$۳,۲۰۰',
+                          amount: '۳,۲۰۰',
                           percent: '%۱۲',
                           isPositive: true,
                           accentColor: Constans.success,
@@ -224,7 +224,7 @@ class BuildHomePage extends StatelessWidget {
                         child: MonthOverviewCard(
                           icon: Icons.trending_down,
                           label: 'هزینه',
-                          amount: '\$۷۵۰',
+                          amount: '۷۵۰',
                           percent: '%۶',
                           isPositive: false,
                           accentColor: Constans.expense,
@@ -235,7 +235,7 @@ class BuildHomePage extends StatelessWidget {
                         child: MonthOverviewCard(
                           icon: Icons.savings_outlined,
                           label: 'پس‌انداز',
-                          amount: '\$۱,۴۵۰',
+                          amount: '۱,۴۵۰',
                           percent: '%۱۸',
                           isPositive: true,
                           accentColor: Constans.electricBlue,
@@ -289,7 +289,7 @@ class BuildHomePage extends StatelessWidget {
                       children: <Widget>[
                         Expanded(
                           child: SpendingOverview(
-                            centerAmount: '\$۷۵۰',
+                            centerAmount: '۷۵۰',
                             categories: const [
                               SpendingCategory(
                                 label: 'غذا و رستوران',

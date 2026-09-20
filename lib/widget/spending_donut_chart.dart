@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:finance/extentions/extentions.dart';
 import 'package:flutter/material.dart';
 import 'package:finance/Constans/constans.dart';
 
@@ -101,16 +102,27 @@ class SpendingDonutChart extends StatelessWidget {
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
-
             children: [
-              Text(
-                centerAmount,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Constans.textPrimary,
-                  fontFamily: 'Vazirmatn',
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/toman_white.png',
+                    width: 20,
+                    height: 25,
+                    filterQuality: FilterQuality.high,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    centerAmount,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Constans.textPrimary,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ],
               ),
               Text(
                 centerLabel,
@@ -130,6 +142,7 @@ class SpendingDonutChart extends StatelessWidget {
 
 // ==========================================
 // لیستِ کنارِ چارت (نقطه‌ی رنگی + اسم + درصد)
+// لیبل تو یه خط، درصد ته ردیف جلوی لیبل
 // ==========================================
 class SpendingLegend extends StatelessWidget {
   final List<SpendingCategory> categories;
@@ -142,17 +155,12 @@ class SpendingLegend extends StatelessWidget {
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: categories.map((cat) {
         final color = colorProvider.colorFor(cat.label);
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
-
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 11,
@@ -160,18 +168,22 @@ class SpendingLegend extends StatelessWidget {
                 decoration: BoxDecoration(shape: BoxShape.circle, color: color),
               ),
               const SizedBox(width: 10),
-              Text(
-                cat.label,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Constans.textPrimary,
-                  fontFamily: 'Lalezar',
+              Expanded(
+                child: Text(
+                  cat.label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Constans.textPrimary,
+                    fontFamily: 'Lalezar',
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-
               Text(
-                '${cat.percent.toInt()}%',
+                '${cat.percent.toInt()}%'.farsiNumber,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -206,15 +218,13 @@ class SpendingOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(child: SpendingLegend(categories: categories)),
-        SizedBox(width: 30),
-        Expanded(
-          child: SpendingDonutChart(
-            centerAmount: centerAmount,
-            categories: categories,
-          ),
+        const SizedBox(width: 30),
+        SpendingDonutChart(
+          centerAmount: centerAmount,
+          categories: categories,
+          size: 180,
         ),
       ],
     );
