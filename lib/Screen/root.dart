@@ -1,9 +1,9 @@
 import 'package:finance/Constans/constans.dart';
-import 'package:finance/Screen/budget_screen.dart';
-import 'package:finance/Screen/insights_screen.dart';
-import 'package:finance/Screen/profile_screen.dart';
-import 'package:finance/Screen/transactions_screen.dart';
-import 'package:finance/Screen/home_screen.dart';
+import 'package:finance/Screen/pages/budget_screen.dart';
+import 'package:finance/Screen/pages/insights_screen.dart';
+import 'package:finance/Screen/pages/profile_screen.dart';
+import 'package:finance/Screen/pages/transactions_screen.dart';
+import 'package:finance/Screen/pages/home_screen.dart';
 import 'package:finance/widget/custom_bottm_nav_widget.dart';
 import 'package:flutter/material.dart';
 

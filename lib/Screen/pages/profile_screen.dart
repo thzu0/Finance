@@ -1,8 +1,15 @@
 import 'package:finance/Constans/constans.dart';
 
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/Screen/setting/about_us_screen.dart';
+import 'package:finance/Screen/setting/account_security_screen.dart';
+import 'package:finance/Screen/setting/app_setting.dart';
+import 'package:finance/Screen/setting/help_support_screen.dart';
+import 'package:finance/Screen/setting/language_screen.dart';
+import 'package:finance/Screen/setting/notification_screen.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 
 class _ProfileOption {
   final IconData icon;
@@ -37,42 +44,75 @@ class Profilescreen extends StatelessWidget {
         icon: Icons.shield_outlined,
         title: 'حساب کاربری و امنیت',
         onTap: () {
-          // TODO: صفحه‌ی حساب کاربری و امنیت
+          Navigator.push(
+            context,
+            PageTransition(
+              type: PageTransitionType.fade,
+              child: Accountsecurityscreen(),
+            ),
+          );
         },
       ),
       _ProfileOption(
         icon: Icons.notifications_none,
         title: 'اعلان‌ها',
         onTap: () {
-          // TODO: صفحه‌ی اعلان‌ها
+          Navigator.push(
+            context,
+            PageTransition(
+              type: PageTransitionType.fade,
+              child: Notificationsscreen(),
+            ),
+          );
         },
       ),
       _ProfileOption(
         icon: Icons.settings_outlined,
         title: 'تنظیمات برنامه',
         onTap: () {
-          // TODO: صفحه‌ی تنظیمات برنامه
+          Navigator.push(
+            context,
+            PageTransition(
+              type: PageTransitionType.fade,
+              child: Appsettingsscreen(),
+            ),
+          );
         },
       ),
       _ProfileOption(
         icon: Icons.language,
         title: 'زبان',
         onTap: () {
-          // TODO: صفحه‌ی راهنما و پشتیبانی
+          Navigator.push(
+            context,
+            PageTransition(
+              type: PageTransitionType.fade,
+              child: Languagescreen(),
+            ),
+          );
         },
       ),
       _ProfileOption(
         icon: Icons.help_outline,
         title: 'راهنما و پشتیبانی',
         onTap: () {
-          // TODO: صفحه‌ی راهنما و پشتیبانی
+          Navigator.push(
+            context,
+            PageTransition(
+              type: PageTransitionType.fade,
+              child: Helpsupportscreen(),
+            ),
+          );
         },
       ),
       _ProfileOption(
         icon: Icons.info_outline,
         title: 'درباره ی ما',
         onTap: () {
-          // TODO: صفحه‌ی راهنما و پشتیبانی
+          Navigator.push(
+            context,
+            PageTransition(type: PageTransitionType.fade, child: Aboutscreen()),
+          );
         },
       ),
     ];
@@ -91,7 +131,13 @@ class Profilescreen extends StatelessWidget {
           padding: const EdgeInsets.only(left: 16),
           child: IconButton(
             onPressed: () {
-              // TODO: تنظیمات
+              Navigator.push(
+                context,
+                PageTransition(
+                  type: PageTransitionType.fade,
+                  child: Appsettingsscreen(),
+                ),
+              );
             },
             icon: Icon(
               Icons.settings_outlined,
