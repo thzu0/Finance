@@ -6,8 +6,6 @@ import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
-// TODO: مسیر فایل چارتت (SpendingDonutChart / SpendingLegend / SpendingCategory) رو اینجا بذار و از کامنت دربیار
-// import 'package:finance/widget/chart.dart';
 
 enum _Period { week, month, year }
 

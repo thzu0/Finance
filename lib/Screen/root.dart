@@ -1,8 +1,8 @@
 import 'package:finance/Constans/constans.dart';
-import 'package:finance/Screen/BudgetScreen.dart';
-import 'package:finance/Screen/InsightsScreen.dart';
-import 'package:finance/Screen/ProfileScreen.dart';
-import 'package:finance/Screen/TransactionsScreen.dart';
+import 'package:finance/Screen/budget_screen.dart';
+import 'package:finance/Screen/insights_screen.dart';
+import 'package:finance/Screen/profile_screen.dart';
+import 'package:finance/Screen/transactions_screen.dart';
 import 'package:finance/Screen/home_screen.dart';
 import 'package:finance/widget/custom_bottm_nav_widget.dart';
 import 'package:flutter/material.dart';
