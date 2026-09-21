@@ -1,8 +1,10 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/Screen/button_page/set_budget.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 
 // ==========================================
 // مدل بودجه‌ی هر دسته
@@ -140,7 +142,13 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
               radius: 14,
               child: IconButton(
                 onPressed: () {
-                  // TODO: رفتن به صفحه‌ی «تعیین بودجه»
+                  Navigator.push(
+                    context,
+                    PageTransition(
+                      child: const SetBudgetScreen(),
+                      type: PageTransitionType.fade,
+                    ),
+                  );
                 },
                 icon: Icon(Icons.add, color: Constans.textPrimary),
               ),

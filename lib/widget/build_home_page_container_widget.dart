@@ -1,9 +1,12 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Screen/button_page/add_transaction.dart';
+import 'package:finance/Screen/button_page/set_budget.dart';
 import 'package:finance/widget/build_action_button_widget.dart';
 import 'package:finance/widget/fl_chart.dart';
 import 'package:finance/widget/month_card_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 
 class BuildHomePage extends StatelessWidget {
   const BuildHomePage({super.key, required this.size});
@@ -151,20 +154,38 @@ class BuildHomePage extends StatelessWidget {
                   label: 'تعیین بودجه',
                   color: Constans.purple,
                   icon: Icons.calendar_today_outlined,
-                  press: () {},
+                  press: () => Navigator.push(
+                    context,
+                    PageTransition(
+                      child: const SetBudgetScreen(),
+                      type: PageTransitionType.fade,
+                    ),
+                  ),
                 ),
 
                 BuildActionButton(
                   label: 'افزودن هزینه',
                   color: Constans.expense,
                   icon: Icons.remove,
-                  press: () {},
+                  press: () => Navigator.push(
+                    context,
+                    PageTransition(
+                      child: const AddTransactionScreen(),
+                      type: PageTransitionType.fade,
+                    ),
+                  ),
                 ),
                 BuildActionButton(
                   label: 'افزودن درآمد',
                   color: Constans.success,
                   icon: Icons.add,
-                  press: () {},
+                  press: () => Navigator.push(
+                    context,
+                    PageTransition(
+                      child: const AddTransactionScreen(),
+                      type: PageTransitionType.fade,
+                    ),
+                  ),
                 ),
               ],
             ),
