@@ -1,131 +1,122 @@
-//todos make the icons button for filter this month or any month that user selected and you should add float or action button in app bar for add the budgets
-
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
-enum TxType { income, expense }
-
-class _Tx {
-  final String title;
-  final String category;
-  final int amount;
-  final String time;
+// ==========================================
+// مدل بودجه‌ی هر دسته
+// ==========================================
+class _Budget {
+  final String name;
   final IconData icon;
-  final Color color;
-  final TxType type;
-  final bool isToday;
+  final int spent;
+  final int limit;
 
-  const _Tx({
-    required this.title,
-    required this.category,
-    required this.amount,
-    required this.time,
+  const _Budget({
+    required this.name,
     required this.icon,
-    required this.color,
-    required this.type,
-    required this.isToday,
+    required this.spent,
+    required this.limit,
   });
+
+  double get ratio => limit == 0 ? 0 : spent / limit;
 }
 
-class BudgetScreen extends StatefulWidget {
-  const BudgetScreen({super.key});
+class Budgetsscreen extends StatefulWidget {
+  const Budgetsscreen({super.key});
 
   @override
-  State<BudgetScreen> createState() => _BudgetScreenState();
+  State<Budgetsscreen> createState() => _BudgetsscreenState();
 }
 
-class _BudgetScreenState extends State<BudgetScreen> {
+class _BudgetsscreenState extends State<Budgetsscreen> {
+  // رنگ‌های وضعیت
+  static const Color _good = Color(0xFF2ED8A3); // زیر ۸۰٪
+  static const Color _warn = Color(0xFFFFB020); // بین ۸۰٪ تا ۱۰۰٪
+  static const Color _bad = Color(0xFFFF5470); // بالای ۱۰۰٪
   static const Color _blue = Color(0xFF4C7DFF);
-  static const Color _income = Color(0xFF2ED8A3);
-  static const Color _expense = Color(0xFFFF5470);
 
-  // 0 = همه ، 1 = درآمد ، 2 = هزینه
-  int _selectedTab = 0;
+  // آستانه‌ی هشدار (۰.۸ یعنی ۸۰٪)
+  static const double _warnThreshold = 0.8;
 
-  // داده‌ی نمونه، بعداً با داده‌ی واقعی عوضش کن
-  final List<_Tx> _items = const [
-    _Tx(
-      title: 'کافه',
-      category: 'خورد و خوراک',
-      amount: 65000,
-      time: '10:24',
-      icon: Icons.local_cafe,
-      color: Color(0xFF14B8A6),
-      type: TxType.expense,
-      isToday: true,
+  static const List<String> _months = [
+    'فروردین',
+    'اردیبهشت',
+    'خرداد',
+    'تیر',
+    'مرداد',
+    'شهریور',
+    'مهر',
+    'آبان',
+    'آذر',
+    'دی',
+    'بهمن',
+    'اسفند',
+  ];
+
+  int _month = 5; // شهریور
+  int _year = 1405;
+
+  // داده‌ی نمونه، بعداً با داده‌ی واقعی (و به تفکیک ماه) عوضش کن
+  final List<_Budget> _budgets = const [
+    _Budget(
+      name: 'خورد و خوراک',
+      icon: Icons.restaurant,
+      spent: 4200000,
+      limit: 5000000,
     ),
-    _Tx(
-      title: 'حقوق',
-      category: 'درآمد',
-      amount: 12000000,
-      time: '09:00',
-      icon: Icons.account_balance_wallet,
-      color: Color(0xFF22C55E),
-      type: TxType.income,
-      isToday: true,
-    ),
-    _Tx(
-      title: 'اسنپ',
-      category: 'حمل و نقل',
-      amount: 124000,
-      time: '08:12',
-      icon: Icons.directions_car,
-      color: Color(0xFF3B82F6),
-      type: TxType.expense,
-      isToday: true,
-    ),
-    _Tx(
-      title: 'دیجی‌کالا',
-      category: 'خرید',
-      amount: 899000,
-      time: '19:45',
+    _Budget(
+      name: 'خرید',
       icon: Icons.shopping_bag,
-      color: Color(0xFFF97316),
-      type: TxType.expense,
-      isToday: false,
+      spent: 3900000,
+      limit: 3500000,
     ),
-    _Tx(
-      title: 'نتفلیکس',
-      category: 'سرگرمی',
-      amount: 159000,
-      time: '18:20',
-      icon: Icons.movie,
-      color: Color(0xFFE11D48),
-      type: TxType.expense,
-      isToday: false,
+    _Budget(
+      name: 'حمل و نقل',
+      icon: Icons.directions_car,
+      spent: 1800000,
+      limit: 3000000,
     ),
-    _Tx(
-      title: 'داروخانه',
-      category: 'سلامت',
-      amount: 200000,
-      time: '16:10',
+    _Budget(name: 'سرگرمی', icon: Icons.movie, spent: 900000, limit: 2000000),
+    _Budget(
+      name: 'سلامت',
       icon: Icons.health_and_safety,
-      color: Color(0xFF10B981),
-      type: TxType.expense,
-      isToday: false,
+      spent: 600000,
+      limit: 1500000,
     ),
   ];
 
-  List<_Tx> _filtered(bool today) {
-    return _items.where((t) {
-      if (t.isToday != today) return false;
-      if (_selectedTab == 1) return t.type == TxType.income;
-      if (_selectedTab == 2) return t.type == TxType.expense;
-      return true;
-    }).toList();
+  // ───────────── ابزارها ─────────────
+  Color _stateColor(double ratio) {
+    if (ratio > 1) return _bad;
+    if (ratio >= _warnThreshold) return _warn;
+    return _good;
   }
 
   String _fmt(int n) {
-    final s = n.toString();
+    final s = n.abs().toString();
     final b = StringBuffer();
     for (int i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
       b.write(s[i]);
     }
     return b.toString();
+  }
+
+  String _num(int n) => _fmt(n).farsiNumber;
+
+  void _shiftMonth(int delta) {
+    setState(() {
+      _month += delta;
+      if (_month < 0) {
+        _month = 11;
+        _year--;
+      } else if (_month > 11) {
+        _month = 0;
+        _year++;
+      }
+    });
   }
 
   @override
@@ -138,6 +129,24 @@ class _BudgetScreenState extends State<BudgetScreen> {
         toolbarHeight: 80,
         backgroundColor: Colors.transparent,
         elevation: 0.0,
+        leadingWidth: 72,
+        // دکمه‌ی افزودن بودجه (شیشه‌ای)
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: GlassBox(
+              height: 44,
+              width: 44,
+              radius: 14,
+              child: IconButton(
+                onPressed: () {
+                  // TODO: رفتن به صفحه‌ی «تعیین بودجه»
+                },
+                icon: Icon(Icons.add, color: Constans.textPrimary),
+              ),
+            ),
+          ),
+        ),
         actions: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -162,20 +171,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
       body: AppGlowBackground(
         child: SafeArea(
           child: SingleChildScrollView(
-            child: Column(
-              children: <Widget>[
-                // اگه سرچ‌باکس رفت زیر تیتر، این خط رو از کامنت دربیار:
-                // const SizedBox(height: 80),
-                _buildSearchRow(),
-                const SizedBox(height: 25),
-                _buildTabBar(),
-                const SizedBox(height: 5),
-                _buildSection('امروز', _filtered(true)),
-                const SizedBox(height: 10),
-                _buildSection('دیروز', _filtered(false)),
-                // فاصله برای اینکه زیر بتم‌نویگیشن نره
-                const SizedBox(height: 110),
-              ],
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Column(
+                children: <Widget>[
+                  // اگه محتوا رفت زیر تیتر، این خط رو از کامنت دربیار:
+                  // const SizedBox(height: 80),
+                  _buildMonthSelector(),
+                  const SizedBox(height: 14),
+                  _buildSummaryCard(),
+                  _buildAlertBanner(),
+                  _buildSectionHeader(),
+                  for (final b in _budgets) _buildCategoryCard(b),
+                  // فاصله برای اینکه زیر بتم‌نویگیشن نره
+                  const SizedBox(height: 110),
+                ],
+              ),
             ),
           ),
         ),
@@ -183,50 +194,37 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  // ───────────── سرچ + فیلتر ─────────────
-  Widget _buildSearchRow() {
+  // ───────────── انتخاب‌گر ماه ─────────────
+  Widget _buildMonthSelector() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const SizedBox(width: 10),
-          Expanded(
-            child: GlassBox(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: TextField(
-                        textAlign: TextAlign.start,
-                        showCursor: false,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.only(right: 5.0),
-                          hintText: 'جستجو...',
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(
-                            color: Constans.textSecondary.withValues(
-                              alpha: 0.8,
-                            ),
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontFamily: 'Lalezar',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 18.0,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.search,
-                    color: Constans.textPrimary.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
+          // ماه قبل (تو RTL سمت راسته)
+          IconButton(
+            onPressed: () => _shiftMonth(-1),
+            icon: Icon(
+              Icons.chevron_right,
+              color: Constans.textSecondary,
+              size: 28,
+            ),
+          ),
+          Text(
+            '${_months[_month]} $_year'.farsiNumber,
+            style: TextStyle(
+              fontFamily: 'Lalezar',
+              fontSize: 20,
+              color: Constans.textPrimary,
+            ),
+          ),
+          // ماه بعد
+          IconButton(
+            onPressed: () => _shiftMonth(1),
+            icon: Icon(
+              Icons.chevron_left,
+              color: Constans.textSecondary,
+              size: 28,
             ),
           ),
         ],
@@ -234,186 +232,282 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  // ───────────── تب‌بار شیشه‌ای ─────────────
-  Widget _buildTabBar() {
-    const labels = ['همه', 'درآمد', 'هزینه'];
+  // ───────────── کارت خلاصه ─────────────
+  Widget _buildSummaryCard() {
+    final totalLimit = _budgets.fold<int>(0, (s, b) => s + b.limit);
+    final totalSpent = _budgets.fold<int>(0, (s, b) => s + b.spent);
+    final remaining = totalLimit - totalSpent;
+    final ratio = totalLimit == 0 ? 0.0 : totalSpent / totalLimit;
+    final percent = (ratio * 100).round();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GlassBox(
-        height: 52,
-        padding: const EdgeInsets.all(4),
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Row(
-            children: List.generate(labels.length, (i) {
-              final selected = _selectedTab == i;
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _selectedTab = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: selected
-                          ? const LinearGradient(
-                              colors: [Color(0xFF4C7DFF), Color(0xFF7C5CFF)],
-                            )
-                          : null,
-                    ),
-                    child: Text(
-                      labels[i],
-                      style: TextStyle(
-                        fontFamily: 'Lalezar',
-                        fontSize: 17,
-                        color: selected ? Colors.white : Constans.textSecondary,
-                      ),
-                    ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Text(
+                  'خرج‌شده از کل بودجه',
+                  style: TextStyle(
+                    fontFamily: 'Lalezar',
+                    fontSize: 15,
+                    color: Constans.textSecondary,
                   ),
                 ),
-              );
-            }),
-          ),
+                const Spacer(),
+                Text(
+                  '$percent%'.farsiNumber,
+                  style: TextStyle(
+                    fontFamily: 'Vazirmatn',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Constans.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _ProgressBar(value: ratio, color: _blue, height: 10),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _stat('بودجه', _num(totalLimit), Constans.textPrimary),
+                _stat('خرج‌شده', _num(totalSpent), Constans.textPrimary),
+                _stat(
+                  'باقی‌مونده',
+                  _num(remaining),
+                  remaining >= 0 ? _good : _bad,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ───────────── هر بخش (امروز / دیروز) ─────────────
-  Widget _buildSection(String title, List<_Tx> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
+  Widget _stat(String label, String value, Color valueColor) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontFamily: 'Lalezar',
-                fontSize: 25,
-                color: Color(0xFF7FB2FF),
-              ),
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Lalezar',
+            fontSize: 13,
+            color: Constans.textSecondary,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: GlassBox(
-            child: Column(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  _buildTxRow(items[i]),
-                  if (i != items.length - 1)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: _blue.withValues(alpha: 0.18),
-                    ),
-                ],
-              ],
-            ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Vazirmatn',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
           ),
         ),
       ],
     );
   }
 
-  // ───────────── یک ردیف تراکنش ─────────────
-  Widget _buildTxRow(_Tx t) {
-    final isIncome = t.type == TxType.income;
-    final amountColor = isIncome ? _income : _expense;
+  // ───────────── نوار هشدار ─────────────
+  Widget _buildAlertBanner() {
+    final over = _budgets.where((b) => b.ratio > 1).toList();
+    if (over.isEmpty) return const SizedBox.shrink();
+
+    final text = over.length == 1
+        ? 'بودجه‌ی «${over.first.name}» ${_num(over.first.spent - over.first.limit)} تومان رد شده'
+        : '${over.length.toString().farsiNumber} دسته از سقف بودجه رد شده';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _bad.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _bad.withValues(alpha: 0.45)),
+        ),
         child: Row(
           children: [
-            // آیکون
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: t.color.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(t.icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-
-            // عنوان و دسته
+            const Icon(Icons.warning_amber_rounded, color: _bad, size: 22),
+            const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontFamily: 'Lalezar',
+                  fontSize: 14,
+                  color: _bad,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ───────────── عنوان بخش دسته‌ها ─────────────
+  Widget _buildSectionHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
+        children: [
+          Text(
+            'دسته‌ها',
+            style: const TextStyle(
+              fontFamily: 'Lalezar',
+              fontSize: 18,
+              color: Color(0xFF7FB2FF),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'مبالغ به تومان',
+            style: TextStyle(
+              fontFamily: 'Lalezar',
+              fontSize: 13,
+              color: Constans.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ───────────── کارت هر دسته ─────────────
+  Widget _buildCategoryCard(_Budget b) {
+    final color = _stateColor(b.ratio);
+    final percent = (b.ratio * 100).round();
+    final isOver = b.ratio > 1;
+    final diff = (b.spent - b.limit).abs();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: GestureDetector(
+        onTap: () {
+          // TODO: ویرایش بودجه‌ی این دسته
+        },
+        child: GlassBox(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Text(
-                    t.title,
-                    style: TextStyle(
-                      fontFamily: 'Lalezar',
-                      fontSize: 19,
-                      color: Constans.textPrimary,
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(b.icon, color: color, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          b.name,
+                          style: TextStyle(
+                            fontFamily: 'Lalezar',
+                            fontSize: 18,
+                            color: Constans.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_num(b.spent)} از ${_num(b.limit)}',
+                          style: TextStyle(
+                            fontFamily: 'Vazirmatn',
+                            fontSize: 14,
+                            color: Constans.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
-                    t.category,
+                    '$percent%'.farsiNumber,
                     style: TextStyle(
-                      fontFamily: 'Lalezar',
-                      fontSize: 14,
-                      color: Constans.textSecondary,
+                      fontFamily: 'Vazirmatn',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: color,
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // مبلغ و ساعت
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _fmt(t.amount).farsiNumber,
-                      textDirection: TextDirection.ltr,
-                      style: TextStyle(
-                        fontFamily: 'Lalezar',
-                        fontSize: 17,
-                        color: amountColor,
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    Image.asset(
-                      isIncome
-                          ? 'assets/images/toman_green.png'
-                          : 'assets/images/toman_red.png',
-
-                      width: 25,
-                      height: 20,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  t.time.farsiNumber,
-                  textDirection: TextDirection.ltr,
+              const SizedBox(height: 12),
+              _ProgressBar(value: b.ratio, color: color, height: 8),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  isOver
+                      ? '${_num(diff)} بیشتر از سقف'
+                      : '${_num(diff)} باقی‌مونده',
                   style: TextStyle(
                     fontFamily: 'Lalezar',
                     fontSize: 13,
-                    color: Constans.textSecondary,
+                    color: isOver ? _bad : Constans.textSecondary,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// نوار پیشرفت (با انیمیشن پر شدن)
+// ==========================================
+class _ProgressBar extends StatelessWidget {
+  final double value; // ۰ تا ۱ (بیشتر از ۱ بریده می‌شه)
+  final Color color;
+  final double height;
+
+  const _ProgressBar({
+    required this.value,
+    required this.color,
+    this.height = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final target = value.clamp(0.0, 1.0);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(height),
+      child: Container(
+        height: height,
+        width: double.infinity,
+        color: Colors.white.withValues(alpha: 0.12),
+        alignment: AlignmentDirectional.centerStart,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: target),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOutCubic,
+          builder: (context, v, _) {
+            return FractionallySizedBox(
+              widthFactor: v,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(height),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
