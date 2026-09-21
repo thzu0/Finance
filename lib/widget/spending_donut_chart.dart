@@ -106,12 +106,12 @@ class SpendingDonutChart extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset(
-                    'assets/images/toman_white.png',
-                    width: 20,
-                    height: 25,
-                    filterQuality: FilterQuality.high,
-                  ),
+                  // Image.asset(
+                  //   'assets/images/toman_white.png',
+                  //   width: 20,
+                  //   height: 25,
+                  //   filterQuality: FilterQuality.high,
+                  // ),
                   SizedBox(width: 4),
                   Text(
                     centerAmount,
