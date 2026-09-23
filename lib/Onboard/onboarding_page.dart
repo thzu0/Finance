@@ -183,7 +183,6 @@ class CreatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
     return Padding(
       padding: const EdgeInsets.only(left: 50.0, right: 50.0, bottom: 150.0),
       child: Column(
