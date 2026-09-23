@@ -13,6 +13,8 @@ class Transactions extends Table {
   RealColumn get amount => real()();
   IntColumn get categoryId => integer().references(Categories, #id)();
   DateTimeColumn get date => dateTime()();
-  TextColumn get note => text().withDefault(const Constant(''))();
+  TextColumn get note => text().withDefault(
+    const Constant(''),
+  )(); //with default means if user dont write any note this property use '' for default
   TextColumn get type => text()(); // 'income' یا 'expense'
 }
