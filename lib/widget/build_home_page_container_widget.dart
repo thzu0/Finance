@@ -25,7 +25,7 @@ class BuildHomePage extends StatelessWidget {
             ),
             child: Container(
               width: size.width,
-              height: size.height * 0.165,
+              constraints: BoxConstraints(minHeight: size.height * 0.165),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -200,7 +200,7 @@ class BuildHomePage extends StatelessWidget {
               vertical: 10.0,
             ),
             child: Container(
-              height: size.height * 0.2,
+              constraints: BoxConstraints(minHeight: size.height * 0.2),
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               decoration: BoxDecoration(
@@ -275,7 +275,6 @@ class BuildHomePage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 0),
             child: Container(
-              height: size.height * 0.27,
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -304,27 +303,15 @@ class BuildHomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        Expanded(
-                          child: SpendingOverview(
-                            centerAmount: '۷۵۰',
-                            categories: const [
-                              SpendingCategory(
-                                label: 'غذا و رستوران',
-                                percent: 37,
-                              ),
-                              SpendingCategory(label: 'حمل و نقل', percent: 20),
-                              SpendingCategory(label: 'خرید', percent: 16),
-                              SpendingCategory(label: 'سرگرمی', percent: 12),
-                              SpendingCategory(label: 'سایر', percent: 15),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  SpendingOverview(
+                    centerAmount: '۷۵۰',
+                    categories: const [
+                      SpendingCategory(label: 'غذا و رستوران', percent: 37),
+                      SpendingCategory(label: 'حمل و نقل', percent: 20),
+                      SpendingCategory(label: 'خرید', percent: 16),
+                      SpendingCategory(label: 'سرگرمی', percent: 12),
+                      SpendingCategory(label: 'سایر', percent: 15),
+                    ],
                   ),
                 ],
               ),

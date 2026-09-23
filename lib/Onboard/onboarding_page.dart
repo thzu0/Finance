@@ -59,7 +59,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             padding: const EdgeInsets.only(right: 10.0),
             child: TextButton(
               onPressed: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   PageTransition(
                     child: const RootPage(),
@@ -189,7 +189,13 @@ class CreatePage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          SizedBox(width: size.width, height: 350.0, child: Image.asset(image)),
+          Expanded(
+            child: Image.asset(
+              image,
+              fit: BoxFit.contain,
+              width: double.infinity,
+            ),
+          ),
           const SizedBox(height: 20.0),
           Text(
             title,

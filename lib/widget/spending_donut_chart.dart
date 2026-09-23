@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/widget/auto_marquee_text.dart';
 import 'package:flutter/material.dart';
 import 'package:finance/Constans/constans.dart';
 
@@ -169,11 +170,9 @@ class SpendingLegend extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: AutoMarqueeText(
                   cat.label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
+
                   style: TextStyle(
                     fontSize: 18,
                     color: Constans.textPrimary,
