@@ -286,15 +286,30 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
 
   // ← وضعیت خالی: وقتی هنوز هیچ بودجه‌ای برای این ماه ثبت نشده
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
-      child: Text(
-        'برای این ماه هنوز بودجه‌ای ثبت نکردی',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: 'Lalezar',
-          fontSize: 15,
-          color: Constans.textSecondary,
+    return SizedBox(
+      height:
+          MediaQuery.of(context).size.height *
+          0.45, // ← ارتفاع مشخص تا Center واقعاً کار کنه
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.savings_outlined,
+              size: 64,
+              color: Constans.textSecondary.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'برای این ماه هنوز بودجه‌ای ثبت نکردی',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Lalezar',
+                fontSize: 16,
+                color: Constans.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

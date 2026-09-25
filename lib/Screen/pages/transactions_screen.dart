@@ -1,6 +1,5 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/icon_map.dart';
-import 'package:finance/Constans/random_color.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
@@ -11,9 +10,6 @@ import 'package:flutter/material.dart';
 enum TxType { income, expense }
 
 class _Tx {
-  // ← فیلد جدید: id واقعی ردیف توی دیتابیس.
-  // بدون این، وقتی کاربر نگه می‌داره و می‌خواد حذف کنه،
-  // نمی‌دونیم دقیقاً کدوم ردیف دیتابیس رو باید پاک کنیم.
   final int id;
   final String title;
   final String category;
@@ -59,15 +55,11 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   void initState() {
     super.initState();
     _loadTransactions();
-    // هر وقت transactionsTicker عوض بشه (یه تراکنش اضافه یا حذف شد)،
-    // دوباره از دیتابیس می‌خونیم تا لیست بدون نیاز به ری‌استارت آپدیت شه.
+    // هر وقت تراکنشی جای دیگه‌ای از اپ اضافه/حذف بشه، این صفحه
+    // خودکار دوباره از دیتابیس می‌خونه.
     transactionsTicker.addListener(_loadTransactions);
   }
 
-  // ← متد جدید: وقتی این صفحه از بین میره (dispose میشه)،
-  // باید گوش‌دادن به ticker رو قطع کنیم، وگرنه یه Listener
-  // بی‌مصرف توی حافظه باقی می‌مونه (memory leak).
-  // این متد قبلاً توی فایلت نبود.
   @override
   void dispose() {
     transactionsTicker.removeListener(_loadTransactions);
@@ -87,7 +79,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
           t.date.day == now.day;
 
       return _Tx(
-        id: t.id, // ← اضافه شد: همون id ردیف توی جدول transactions
+        id: t.id,
         title: t.note.isNotEmpty ? t.note : c.name,
         category: c.name,
         amount: t.amount.toInt(),
@@ -127,127 +119,27 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     return b.toString();
   }
 
-  /// وقتی کاربر روی یه تراکنش نگه می‌داره، این باتم‌شیت باز میشه.
-  /// طراحیش هماهنگ با ظاهر شیشه‌ای بقیه‌ی اپ (پس‌زمینه‌ی تیره + گوشه‌های گرد + فونت Lalezar).
-  /// اگه کاربر "حذف" رو زد: هم از دیتابیس پاک میشه، هم فوراً از لیست محلی حذف میشه.
   Future<void> _confirmDelete(_Tx t) async {
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showDialog<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Directionality(
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Constans.background,
+        title: const Text('حذف تراکنش', textDirection: TextDirection.rtl),
+        content: const Text(
+          'مطمئنی می‌خوای این تراکنش حذف بشه؟',
           textDirection: TextDirection.rtl,
-          child: Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-            decoration: BoxDecoration(
-              color: Constans.background,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _blue.withValues(alpha: 0.25)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // دستگیره‌ی بالای باتم‌شیت (فقط تزئینیه)
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 18),
-                  decoration: BoxDecoration(
-                    color: Constans.textSecondary.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-
-                // آیکون هشدار
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: _expense.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.delete_outline, color: _expense, size: 28),
-                ),
-                const SizedBox(height: 14),
-
-                Text(
-                  'حذف این تراکنش؟',
-                  style: TextStyle(
-                    fontFamily: 'Lalezar',
-                    fontSize: 20,
-                    color: Constans.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  t.title,
-                  style: TextStyle(
-                    fontFamily: 'Lalezar',
-                    fontSize: 15,
-                    color: Constans.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                Row(
-                  children: [
-                    // دکمه‌ی انصراف
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => Navigator.pop(ctx, false),
-                        child: Container(
-                          height: 50,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Constans.textSecondary.withValues(
-                              alpha: 0.12,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            'انصراف',
-                            style: TextStyle(
-                              fontFamily: 'Lalezar',
-                              fontSize: 16,
-                              color: Constans.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // دکمه‌ی حذف
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => Navigator.pop(ctx, true),
-                        child: Container(
-                          height: 50,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: _expense,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'حذف',
-                            style: TextStyle(
-                              fontFamily: 'Lalezar',
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('انصراف'),
           ),
-        );
-      },
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
 
     if (ok == true) {
@@ -302,13 +194,46 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                       const SizedBox(height: 25),
                       _buildTabBar(),
                       const SizedBox(height: 5),
-                      _buildSection('امروز', _filtered(true)),
-                      const SizedBox(height: 10),
-                      _buildSection('دیروز', _filtered(false)),
+                      if (_items.isEmpty)
+                        _buildEmptyState()
+                      else ...[
+                        _buildSection('امروز', _filtered(true)),
+                        const SizedBox(height: 10),
+                        _buildSection('قبلی', _filtered(false)),
+                      ],
                       const SizedBox(height: 110),
                     ],
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+
+  // ───────────── وضعیت خالی، وسط صفحه ─────────────
+  Widget _buildEmptyState() {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.45,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: Constans.textSecondary.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'هنوز هیچ تراکنشی ثبت نکردی',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Lalezar',
+                fontSize: 16,
+                color: Constans.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -466,15 +391,11 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     );
   }
 
-  // ───────────── یک ردیف تراکنش ─────────────
+  // ───────────── یک ردیف تراکنش (با نگه‌داشتن = حذف) ─────────────
   Widget _buildTxRow(_Tx t) {
     final isIncome = t.type == TxType.income;
     final amountColor = isIncome ? _income : _expense;
-    final textAmount = isIncome ? '+' : '-';
 
-    // ← تغییر اصلی اینجاست: کل محتوای قبلی رو با GestureDetector پیچیدیم
-    // تا onLongPress بگیره. هر وقت کاربر انگشتش رو نگه داره،
-    // _confirmDelete(t) صدا زده میشه.
     return GestureDetector(
       onLongPress: () => _confirmDelete(t),
       child: Padding(
@@ -488,7 +409,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: colorForSeed(t.id).withValues(alpha: 0.85),
+                  color: t.color.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(t.icon, color: Colors.white, size: 24),
@@ -537,21 +458,11 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                           color: amountColor,
                         ),
                       ),
-                      SizedBox(width: 3),
-                      Text(
-                        textAmount,
-                        style: TextStyle(
-                          color: isIncome ? _income : _expense,
-                          fontFamily: 'Lalezar',
-                          fontSize: 18,
-                        ),
-                      ),
-                      SizedBox(width: 6),
+                      SizedBox(width: 5),
                       Image.asset(
                         isIncome
                             ? 'assets/images/toman_green.png'
                             : 'assets/images/toman_red.png',
-
                         width: 25,
                         height: 20,
                         filterQuality: FilterQuality.high,
@@ -573,7 +484,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
             ],
           ),
         ),
-      ), // ← بستن Padding
-    ); // ← بستن GestureDetector
+      ),
+    );
   }
 }
