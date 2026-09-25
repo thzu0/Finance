@@ -469,6 +469,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   Widget _buildTxRow(_Tx t) {
     final isIncome = t.type == TxType.income;
     final amountColor = isIncome ? _income : _expense;
+    final textAmount = isIncome ? '+' : '-';
 
     // ← تغییر اصلی اینجاست: کل محتوای قبلی رو با GestureDetector پیچیدیم
     // تا onLongPress بگیره. هر وقت کاربر انگشتش رو نگه داره،
@@ -535,7 +536,16 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                           color: amountColor,
                         ),
                       ),
-                      SizedBox(width: 5),
+                      SizedBox(width: 3),
+                      Text(
+                        textAmount,
+                        style: TextStyle(
+                          color: isIncome ? _income : _expense,
+                          fontFamily: 'Lalezar',
+                          fontSize: 18,
+                        ),
+                      ),
+                      SizedBox(width: 6),
                       Image.asset(
                         isIncome
                             ? 'assets/images/toman_green.png'
