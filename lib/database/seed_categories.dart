@@ -1,3 +1,4 @@
+//todos fix random color for all transactions
 import 'app_database.dart';
 import 'database_provider.dart';
 
