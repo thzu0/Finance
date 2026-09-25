@@ -4,6 +4,7 @@ import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/Screen/setting/about_us_screen.dart';
 import 'package:finance/Screen/setting/account_security_screen.dart';
 import 'package:finance/Screen/setting/app_setting.dart';
+import 'package:finance/Screen/setting/credit_card_screen.dart';
 import 'package:finance/Screen/setting/help_support_screen.dart';
 import 'package:finance/Screen/setting/language_screen.dart';
 import 'package:finance/Screen/setting/notification_screen.dart';
@@ -67,14 +68,14 @@ class Profilescreen extends StatelessWidget {
         },
       ),
       _ProfileOption(
-        icon: Icons.settings_outlined,
-        title: 'تنظیمات برنامه',
+        icon: Icons.credit_card,
+        title: 'کارت ها ',
         onTap: () {
           Navigator.push(
             context,
             PageTransition(
               type: PageTransitionType.fade,
-              child: Appsettingsscreen(),
+              child: CreditCardScreen(),
             ),
           );
         },
