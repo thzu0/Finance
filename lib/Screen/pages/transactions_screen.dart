@@ -1,5 +1,6 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/icon_map.dart';
+import 'package:finance/Constans/random_color.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
@@ -487,7 +488,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: t.color.withValues(alpha: 0.85),
+                  color: colorForSeed(t.id).withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(t.icon, color: Colors.white, size: 24),

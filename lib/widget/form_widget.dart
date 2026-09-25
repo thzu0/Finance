@@ -1,8 +1,10 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 // ==========================================
 // ارقام فارسی / انگلیسی
@@ -118,28 +120,304 @@ String formatJalali(DateTime d) {
   return '${toPersianDigits(j[2].toString())} ${_jalaliMonths[j[1] - 1]} ${toPersianDigits(j[0].toString())}';
 }
 
-/// انتخاب تاریخ (تقویم خود فلاتر میلادیه، ولی تاریخ انتخاب‌شده شمسی نشون داده می‌شه)
+/// انتخاب تاریخ با یه تقویم شمسی کاملاً سفارشی — نه استایل پیش‌فرض
+/// پکیج، بلکه هم‌سبک با ظاهر شیشه‌ای بقیه‌ی اپ (GlassBox، رنگ‌های
+/// kAccent/kDialogBg، فونت Lalezar، دکمه‌های گرادیانتی).
 Future<DateTime?> pickGlassDate(
   BuildContext context,
   DateTime initial, {
   DateTime? first,
   DateTime? last,
 }) {
-  return showDatePicker(
+  return showModalBottomSheet<DateTime>(
     context: context,
-    initialDate: initial,
-    firstDate: first ?? DateTime(2020),
-    lastDate: last ?? DateTime(2035),
-    builder: (ctx, child) => Theme(
-      data: Theme.of(ctx).copyWith(
-        colorScheme: const ColorScheme.dark(
-          primary: kAccent,
-          surface: kDialogBg,
-        ),
-      ),
-      child: child!,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (ctx) => _GlassJalaliDatePicker(
+      initial: Jalali.fromDateTime(initial),
+      first: Jalali.fromDateTime(first ?? DateTime(2020)),
+      last: Jalali.fromDateTime(last ?? DateTime(2035)),
     ),
   );
+}
+
+/// خودِ ویجت تقویم شمسی. یه هدر با ماه/سال و پیکان‌های جابه‌جایی،
+/// یه ردیف نام روزهای هفته، و یه گرید ۷‌ستونه از روزهای همون ماه.
+class _GlassJalaliDatePicker extends StatefulWidget {
+  final Jalali initial;
+  final Jalali first;
+  final Jalali last;
+
+  const _GlassJalaliDatePicker({
+    required this.initial,
+    required this.first,
+    required this.last,
+  });
+
+  @override
+  State<_GlassJalaliDatePicker> createState() => _GlassJalaliDatePickerState();
+}
+
+class _GlassJalaliDatePickerState extends State<_GlassJalaliDatePicker> {
+  late Jalali _visibleMonth; // ماهی که گرید فعلاً نشونش میده (day همیشه ۱)
+  late Jalali _selected; // روزی که کاربر انتخاب کرده
+
+  static const List<String> _monthNames = [
+    'فروردین',
+    'اردیبهشت',
+    'خرداد',
+    'تیر',
+    'مرداد',
+    'شهریور',
+    'مهر',
+    'آبان',
+    'آذر',
+    'دی',
+    'بهمن',
+    'اسفند',
+  ];
+
+  // ترتیب باید دقیقاً با weekDay کتابخونه‌ی shamsi_date هماهنگ باشه:
+  // ۱=شنبه ... ۷=جمعه.
+  static const List<String> _weekdayShort = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initial;
+    _visibleMonth = Jalali(widget.initial.year, widget.initial.month, 1);
+  }
+
+  // شماره‌ی ترتیبی ماه (سال×۱۲+ماه) برای مقایسه‌ی راحت با first/last
+  int _idx(Jalali j) => j.year * 12 + j.month;
+
+  bool get _canGoNext =>
+      _idx(_visibleMonth) <
+      _idx(Jalali(widget.last.year, widget.last.month, 1));
+  bool get _canGoPrev =>
+      _idx(_visibleMonth) >
+      _idx(Jalali(widget.first.year, widget.first.month, 1));
+
+  void _shiftMonth(int delta) {
+    var y = _visibleMonth.year;
+    var m = _visibleMonth.month + delta;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    } else if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    setState(() => _visibleMonth = Jalali(y, m, 1));
+  }
+
+  bool _isSameDay(Jalali a, Jalali b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  // چک می‌کنه یه روز داخل بازه‌ی [first, last] هست یا نه
+  bool _isSelectable(Jalali j) {
+    int comparable(Jalali x) => x.year * 10000 + x.month * 100 + x.day;
+    final v = comparable(j);
+    return v >= comparable(widget.first) && v <= comparable(widget.last);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = _visibleMonth.monthLength;
+    final leadingBlanks =
+        _visibleMonth.weekDay - 1; // خونه‌های خالی قبل از روز اول
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 20),
+        decoration: BoxDecoration(
+          color: kDialogBg,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: kAccent.withValues(alpha: 0.35)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // دستگیره
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // هدر ماه/سال + پیکان‌ها
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: _canGoNext ? () => _shiftMonth(1) : null,
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color: _canGoNext ? Colors.white : Colors.white24,
+                    ),
+                  ),
+                  Text(
+                    '${_monthNames[_visibleMonth.month - 1]} ${_visibleMonth.year.toString().farsiNumber}',
+                    style: const TextStyle(
+                      fontFamily: 'Lalezar',
+                      fontSize: 19,
+                      color: Colors.white,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _canGoPrev ? () => _shiftMonth(-1) : null,
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color: _canGoPrev ? Colors.white : Colors.white24,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              // نام روزهای هفته
+              Row(
+                children: _weekdayShort
+                    .map(
+                      (d) => Expanded(
+                        child: Center(
+                          child: Text(
+                            d,
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 13,
+                              color: Constans.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 6),
+
+              // گرید روزها
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: leadingBlanks + daysInMonth,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                ),
+                itemBuilder: (context, i) {
+                  if (i < leadingBlanks) return const SizedBox.shrink();
+
+                  final day = i - leadingBlanks + 1;
+                  final date = Jalali(
+                    _visibleMonth.year,
+                    _visibleMonth.month,
+                    day,
+                  );
+                  final selected = _isSameDay(date, _selected);
+                  final today = _isSameDay(date, Jalali.now());
+                  final enabled = _isSelectable(date);
+
+                  return GestureDetector(
+                    onTap: enabled
+                        ? () => setState(() => _selected = date)
+                        : null,
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected ? kAccent : Colors.transparent,
+                        border: (today && !selected)
+                            ? Border.all(color: kAccent, width: 1.2)
+                            : null,
+                      ),
+                      child: Text(
+                        day.toString().farsiNumber,
+                        style: TextStyle(
+                          fontFamily: 'Vazirmatn',
+                          fontSize: 14,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: !enabled
+                              ? Colors.white24
+                              : selected
+                              ? Colors.white
+                              : Constans.textPrimary,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+
+              // دکمه‌های لغو / تایید
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text(
+                          'لغو',
+                          style: TextStyle(
+                            fontFamily: 'Lalezar',
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () =>
+                          Navigator.pop(context, _selected.toDateTime()),
+                      child: Container(
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [kAccent, kAccent2],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text(
+                          'تایید',
+                          style: TextStyle(
+                            fontFamily: 'Lalezar',
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ==========================================

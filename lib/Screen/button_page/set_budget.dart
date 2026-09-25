@@ -3,13 +3,18 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/database/app_database.dart';
 import 'package:finance/database/budget_repository.dart';
-import 'package:finance/database/seed_categories.dart'; // getCategoriesByType اینجاست
+import 'package:finance/database/seed_categories.dart';
 import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
 class SetBudgetScreen extends StatefulWidget {
-  const SetBudgetScreen({super.key});
+  // ← اضافه شد: اگه این پر باشه، صفحه توی «حالت ویرایش» بازمیشه
+  // و فیلدها با دیتای همین بودجه پر میشن. اگه null باشه، یعنی
+  // «افزودن بودجه‌ی جدید» (رفتار قبلی، بدون تغییر).
+  final Budget? existingBudget;
+
+  const SetBudgetScreen({super.key, this.existingBudget});
 
   @override
   State<SetBudgetScreen> createState() => _SetBudgetScreenState();
@@ -19,11 +24,9 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   static const int _sliderMax = 20000000;
   static const int _sliderStep = 100000;
 
-  int _mode = 0; // 0 = ماهانه ، 1 = سفارشی
+  int _mode = 0;
   final TextEditingController _amountCtrl = TextEditingController();
 
-  // ← به‌جای اندیس ساده روی لیست استاتیک، حالا دسته‌های واقعی
-  // از دیتابیس می‌خونیم و اندیسِ انتخاب‌شده رو نگه می‌داریم.
   List<Category> _categories = [];
   int? _categoryIndex;
   bool _loadingCategories = true;
@@ -32,8 +35,8 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   DateTime _end = DateTime.now().add(const Duration(days: 30));
 
   bool get _isMonthly => _mode == 0;
+  bool get _isEditing => widget.existingBudget != null; // ← اضافه شد
 
-  // ← دسته‌ی واقعاً انتخاب‌شده (یا null اگه هنوز چیزی انتخاب نشده)
   Category? get _selectedCategory =>
       _categoryIndex == null ? null : _categories[_categoryIndex!];
 
@@ -41,17 +44,37 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   void initState() {
     super.initState();
     _amountCtrl.addListener(() => setState(() {}));
-    _loadCategories(); // ← دسته‌های هزینه رو از دیتابیس واقعی می‌خونیم
+
+    // ← اضافه شد: اگه داریم ویرایش می‌کنیم، فیلدهایی که به لیست
+    // دسته‌ها نیاز ندارن (مبلغ، حالت، تاریخ‌ها) رو همینجا از قبل پر می‌کنیم.
+    final existing = widget.existingBudget;
+    if (existing != null) {
+      _mode = existing.period == 'monthly' ? 0 : 1;
+      _amountCtrl.text = formatAmount(existing.amount.round());
+      _start = existing.startDate;
+      _end =
+          existing.endDate ?? existing.startDate.add(const Duration(days: 30));
+    }
+
+    _loadCategories();
   }
 
-  // ← متد جدید: چون بودجه فقط برای دسته‌های "هزینه" معنی داره،
-  // فقط دسته‌هایی با type == 'expense' رو می‌خونیم.
   Future<void> _loadCategories() async {
     final list = await getCategoriesByType('expense');
     if (mounted) {
       setState(() {
         _categories = list;
         _loadingCategories = false;
+
+        // ← اضافه شد: بعد از لود شدن دسته‌ها، اگه ویرایش می‌کنیم،
+        // اندیس همون دسته‌ای که این بودجه بهش تعلق داره رو پیدا می‌کنیم.
+        final existing = widget.existingBudget;
+        if (existing != null) {
+          final idx = _categories.indexWhere(
+            (c) => c.id == existing.categoryId,
+          );
+          _categoryIndex = idx == -1 ? null : idx;
+        }
       });
     }
   }
@@ -78,9 +101,6 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
       return;
     }
 
-    // ← به‌جای kExpenseCategories ثابت، لیست GlassOption رو از روی
-    // دسته‌های واقعی دیتابیس می‌سازیم (آیکون هر دسته با iconFromName
-    // از رشته‌ی ذخیره‌شده توی دیتابیس بازسازی میشه).
     final options = _categories
         .map((c) => GlassOption(iconFromName(c.icon), c.name))
         .toList();
@@ -110,7 +130,6 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     if (d != null && mounted) setState(() => _end = d);
   }
 
-  // ← دیگه فقط اسنک‌بار نمی‌زنه؛ واقعاً توی دیتابیس ذخیره می‌کنه.
   Future<void> _save() async {
     final amount = parseAmount(_amountCtrl.text);
     final category = _selectedCategory;
@@ -128,19 +147,143 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
       return;
     }
 
-    // ← ذخیره‌ی واقعی. خودِ addBudget بعد از ذخیره، budgetsTicker رو
-    // صدا می‌زنه تا هر صفحه‌ای که لیست بودجه‌ها رو نشون میده، خودکار رفرش شه.
-    await addBudget(
-      categoryId: category.id,
-      amount: amount.toDouble(),
-      period: _isMonthly ? 'monthly' : 'custom',
-      startDate: _start,
-      endDate: _isMonthly ? null : _end,
-    );
+    // ← اضافه شد: اگه در حالت ویرایشیم، updateBudget صدا زده میشه؛
+    // وگرنه (رفتار قبلی) addBudget یه ردیف جدید می‌سازه.
+    if (_isEditing) {
+      await updateBudget(
+        id: widget.existingBudget!.id,
+        categoryId: category.id,
+        amount: amount.toDouble(),
+        period: _isMonthly ? 'monthly' : 'custom',
+        startDate: _start,
+        endDate: _isMonthly ? null : _end,
+      );
+    } else {
+      await addBudget(
+        categoryId: category.id,
+        amount: amount.toDouble(),
+        period: _isMonthly ? 'monthly' : 'custom',
+        startDate: _start,
+        endDate: _isMonthly ? null : _end,
+      );
+    }
 
     if (!mounted) return;
-    showGlassSnack(context, 'بودجه ذخیره شد');
+    showGlassSnack(context, _isEditing ? 'بودجه ویرایش شد' : 'بودجه ذخیره شد');
     Navigator.of(context).pop();
+  }
+
+  // ← متد جدید: حذف بودجه از همین صفحه‌ی ویرایش، با یه باتم‌شیت
+  // تایید هم‌سبک با بقیه‌ی اپ (شبیه همونی که برای حذف تراکنش ساختیم).
+  Future<void> _confirmDelete() async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            decoration: BoxDecoration(
+              color: Constans.background,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: kAccent.withValues(alpha: 0.25)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Constans.textSecondary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: kDanger.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.delete_outline, color: kDanger, size: 28),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'حذف این بودجه؟',
+                  style: TextStyle(
+                    fontFamily: 'Lalezar',
+                    fontSize: 20,
+                    color: Constans.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, false),
+                        child: Container(
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Constans.textSecondary.withValues(
+                              alpha: 0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            'انصراف',
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 16,
+                              color: Constans.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, true),
+                        child: Container(
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: kDanger,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text(
+                            'حذف',
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (ok == true && mounted) {
+      await deleteBudget(widget.existingBudget!.id);
+      if (!mounted) return;
+      showGlassSnack(context, 'بودجه حذف شد');
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -151,7 +294,8 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     ).clamp(0, _sliderMax).toDouble();
 
     return GlassPage(
-      title: 'تعیین بودجه',
+      // ← تغییر کرد: تیتر بسته به حالت افزودن/ویرایش فرق می‌کنه
+      title: _isEditing ? 'ویرایش بودجه' : 'تعیین بودجه',
       children: [
         const SizedBox(height: 4),
         GlassSegmented(
@@ -238,6 +382,24 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
         ),
         const SizedBox(height: 24),
         GlassSaveButton(text: 'ذخیره', onPressed: _save),
+
+        // ← اضافه شد: دکمه‌ی حذف، فقط توی حالت ویرایش نشون داده میشه
+        if (_isEditing) ...[
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _confirmDelete,
+            child: Container(
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: kDanger.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: kDanger.withValues(alpha: 0.4)),
+              ),
+              child: Text('حذف بودجه', style: glassText(18, color: kDanger)),
+            ),
+          ),
+        ],
       ],
     );
   }

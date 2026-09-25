@@ -1,15 +1,12 @@
 import 'package:drift/drift.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'app_database.dart';
 import 'database_provider.dart';
 
-/// یه بودجه‌ی جدید (برای یه دسته‌ی خاص، در یه بازه‌ی زمانی) ذخیره می‌کنه.
-/// period باید 'monthly' یا 'custom' باشه.
-/// برای 'monthly'، فقط startDate مهمه (بازه‌ش خودکار میشه کل همون ماه).
-/// برای 'custom'، endDate هم باید پر شده باشه.
 Future<int> addBudget({
   required int categoryId,
   required double amount,
-  required String period, // 'monthly' | 'custom'
+  required String period,
   required DateTime startDate,
   DateTime? endDate,
 }) async {
@@ -24,11 +21,32 @@ Future<int> addBudget({
           endDate: Value(endDate),
         ),
       );
-
-  // ← به همه‌ی صفحه‌هایی که لیست بودجه‌ها رو نشون میدن خبر میده
   budgetsTicker.value++;
-
   return id;
+}
+
+// ← تابع جدید: به‌جای ساختن یه ردیف جدید، یه بودجه‌ی موجود رو
+// آپدیت می‌کنه (برای صفحه‌ی ویرایش لازمه).
+Future<void> updateBudget({
+  required int id,
+  required int categoryId,
+  required double amount,
+  required String period,
+  required DateTime startDate,
+  DateTime? endDate,
+}) async {
+  await (database.update(
+    database.budgets,
+  )..where((b) => b.id.equals(id))).write(
+    BudgetsCompanion(
+      categoryId: Value(categoryId),
+      amount: Value(amount),
+      period: Value(period),
+      startDate: Value(startDate),
+      endDate: Value(endDate),
+    ),
+  );
+  budgetsTicker.value++;
 }
 
 Future<void> deleteBudget(int id) async {
@@ -36,8 +54,6 @@ Future<void> deleteBudget(int id) async {
   budgetsTicker.value++;
 }
 
-/// نتیجه‌ی نهایی هر بودجه: خودِ بودجه + دسته‌ش + مقدار «خرج‌شده»‌ی
-/// واقعی (محاسبه‌شده از جمع تراکنش‌های هزینه‌ی همون دسته توی همون بازه).
 class BudgetWithSpent {
   final Budget budget;
   final Category category;
@@ -50,17 +66,17 @@ class BudgetWithSpent {
   });
 }
 
-/// بازه‌ی زمانی مؤثر یه بودجه رو برمی‌گردونه.
-/// برای ماهانه: از اول تا آخر همون ماهی که startDate توشه.
-/// برای سفارشی: خودِ startDate تا endDate (اگه endDate نال بود، یعنی داده خرابه، همون startDate رو برمی‌گردونیم).
 (DateTime, DateTime) _effectiveRange(Budget b) {
   if (b.period == 'monthly') {
-    final start = DateTime(b.startDate.year, b.startDate.month, 1);
-    final end = DateTime(
-      b.startDate.year,
-      b.startDate.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
+    final j = Jalali.fromDateTime(b.startDate);
+    final jFirstDay = Jalali(j.year, j.month, 1);
+    final start = jFirstDay.toDateTime();
+    final lastDay = jFirstDay.monthLength;
+    final end = Jalali(
+      j.year,
+      j.month,
+      lastDay,
+    ).toDateTime().add(const Duration(hours: 23, minutes: 59, seconds: 59));
     return (start, end);
   } else {
     final end = b.endDate ?? b.startDate;
@@ -68,15 +84,15 @@ class BudgetWithSpent {
   }
 }
 
-/// همه‌ی بودجه‌هایی که بازه‌شون با ماه/سال داده‌شده هم‌پوشانی داره رو برمی‌گردونه،
-/// همراه با دسته و مقدار خرج‌شده‌ی واقعی (از جدول transactions).
-Future<List<BudgetWithSpent>> getBudgetsForMonth(int year, int month) async {
-  final monthStart = DateTime(year, month, 1);
-  final monthEnd = DateTime(
-    year,
-    month + 1,
-    1,
-  ).subtract(const Duration(milliseconds: 1));
+Future<List<BudgetWithSpent>> getBudgetsForMonth(int jYear, int jMonth) async {
+  final jFirstDay = Jalali(jYear, jMonth, 1);
+  final monthStart = jFirstDay.toDateTime();
+  final lastDay = jFirstDay.monthLength;
+  final monthEnd = Jalali(
+    jYear,
+    jMonth,
+    lastDay,
+  ).toDateTime().add(const Duration(hours: 23, minutes: 59, seconds: 59));
 
   final rows = await (database.select(database.budgets).join([
     innerJoin(
@@ -93,11 +109,9 @@ Future<List<BudgetWithSpent>> getBudgetsForMonth(int year, int month) async {
 
     final (start, end) = _effectiveRange(b);
 
-    // فقط بودجه‌هایی که بازه‌شون توی ماه انتخاب‌شده افته یا باهاش تداخل داره
     final overlaps = start.isBefore(monthEnd) && end.isAfter(monthStart);
     if (!overlaps) continue;
 
-    // جمع تراکنش‌های هزینه‌ی همین دسته، توی بازه‌ی خودِ بودجه (نه کل ماه)
     final sumQuery = database.selectOnly(database.transactions)
       ..addColumns([database.transactions.amount.sum()])
       ..where(database.transactions.categoryId.equals(b.categoryId ?? -1))
