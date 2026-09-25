@@ -303,7 +303,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                       const SizedBox(height: 5),
                       _buildSection('امروز', _filtered(true)),
                       const SizedBox(height: 10),
-                      _buildSection('قبلی', _filtered(false)),
+                      _buildSection('دیروز', _filtered(false)),
                       const SizedBox(height: 110),
                     ],
                   ),
