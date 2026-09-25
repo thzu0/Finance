@@ -1,7 +1,9 @@
-// ignore: file_names
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Constans/icon_map.dart';
+import 'package:finance/database/app_database.dart';
+import 'package:finance/database/seed_categories.dart';
+import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/widget/form_widget.dart';
-
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
@@ -21,14 +23,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TextEditingController _amountCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
 
-  int? _category;
+  int? _categoryIndex;
+  List<Category> _dbCategories = [];
   int _account = 0;
   DateTime _date = DateTime.now();
 
   bool get _isExpense => _tab == 0;
-  List<GlassOption> get _categories =>
-      _isExpense ? kExpenseCategories : kIncomeCategories;
+  List<GlassOption> get _categories => _dbCategories
+      .map((c) => GlassOption(iconFromName(c.icon), c.name))
+      .toList();
   Color get _color => _isExpense ? kDanger : kSuccess;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final list = await getCategoriesByType(_isExpense ? 'expense' : 'income');
+    if (mounted) {
+      setState(() {
+        _dbCategories = list;
+        _categoryIndex = null;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -43,9 +63,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       context,
       title: _isExpense ? 'انتخاب دسته' : 'انتخاب منبع درآمد',
       options: _categories,
-      selected: _category,
+      selected: _categoryIndex,
     );
-    if (i != null && mounted) setState(() => _category = i);
+    if (i != null && mounted) setState(() => _categoryIndex = i);
   }
 
   Future<void> _pickAccount() async {
@@ -65,29 +85,38 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (d != null && mounted) setState(() => _date = d);
   }
 
-  void _save() {
+  Future<void> _save() async {
     final amount = parseAmount(_amountCtrl.text);
     if (amount <= 0) {
       showGlassSnack(context, 'مبلغ رو وارد کن');
       return;
     }
-    if (_category == null) {
+    if (_categoryIndex == null) {
       showGlassSnack(
         context,
         _isExpense ? 'دسته رو انتخاب کن' : 'منبع درآمد رو انتخاب کن',
       );
       return;
     }
-    // TODO: ذخیره‌ی واقعی تراکنش:
-    // نوع: _isExpense ، مبلغ: amount ، دسته: _categories[_category!] ،
-    // حساب: kAccounts[_account] ، تاریخ: _date ، توضیحات: _noteCtrl.text
+
+    final realCategoryId = _dbCategories[_categoryIndex!].id;
+
+    await addTransaction(
+      amount: amount.toDouble(),
+      categoryId: realCategoryId,
+      date: _date,
+      type: _isExpense ? 'expense' : 'income',
+      note: _noteCtrl.text,
+    );
+
+    if (!mounted) return;
     showGlassSnack(context, _isExpense ? 'هزینه ثبت شد' : 'درآمد ثبت شد');
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(true); // true یعنی «یه چیزی تغییر کرد»
   }
 
   @override
   Widget build(BuildContext context) {
-    final cat = _category == null ? null : _categories[_category!];
+    final cat = _categoryIndex == null ? null : _categories[_categoryIndex!];
 
     return GlassPage(
       title: 'افزودن تراکنش',
@@ -96,10 +125,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         GlassSegmented(
           labels: const ['هزینه', 'درآمد'],
           selected: _tab,
-          onChanged: (i) => setState(() {
-            _tab = i;
-            _category = null; // لیست دسته‌ها عوض می‌شه
-          }),
+          onChanged: (i) {
+            setState(() => _tab = i);
+            _loadCategories();
+          },
         ),
         const SizedBox(height: 16),
         AmountField(

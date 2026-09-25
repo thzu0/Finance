@@ -1,9 +1,11 @@
 // ignore: file_names
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Constans/icon_map.dart';
+import 'package:finance/database/app_database.dart';
+import 'package:finance/database/budget_repository.dart';
+import 'package:finance/database/seed_categories.dart'; // getCategoriesByType اینجاست
 import 'package:finance/widget/form_widget.dart';
-
 import 'package:finance/widget/glass_box_widget.dart';
-
 import 'package:flutter/material.dart';
 
 class SetBudgetScreen extends StatefulWidget {
@@ -19,17 +21,39 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
 
   int _mode = 0; // 0 = ماهانه ، 1 = سفارشی
   final TextEditingController _amountCtrl = TextEditingController();
-  int? _category;
+
+  // ← به‌جای اندیس ساده روی لیست استاتیک، حالا دسته‌های واقعی
+  // از دیتابیس می‌خونیم و اندیسِ انتخاب‌شده رو نگه می‌داریم.
+  List<Category> _categories = [];
+  int? _categoryIndex;
+  bool _loadingCategories = true;
+
   DateTime _start = DateTime.now();
   DateTime _end = DateTime.now().add(const Duration(days: 30));
 
   bool get _isMonthly => _mode == 0;
 
+  // ← دسته‌ی واقعاً انتخاب‌شده (یا null اگه هنوز چیزی انتخاب نشده)
+  Category? get _selectedCategory =>
+      _categoryIndex == null ? null : _categories[_categoryIndex!];
+
   @override
   void initState() {
     super.initState();
-    // با تایپ مبلغ، اسلایدر هم جابه‌جا بشه
     _amountCtrl.addListener(() => setState(() {}));
+    _loadCategories(); // ← دسته‌های هزینه رو از دیتابیس واقعی می‌خونیم
+  }
+
+  // ← متد جدید: چون بودجه فقط برای دسته‌های "هزینه" معنی داره،
+  // فقط دسته‌هایی با type == 'expense' رو می‌خونیم.
+  Future<void> _loadCategories() async {
+    final list = await getCategoriesByType('expense');
+    if (mounted) {
+      setState(() {
+        _categories = list;
+        _loadingCategories = false;
+      });
+    }
   }
 
   @override
@@ -48,13 +72,26 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
 
   Future<void> _pickCategory() async {
     FocusScope.of(context).unfocus();
+
+    if (_loadingCategories || _categories.isEmpty) {
+      showGlassSnack(context, 'دسته‌ها هنوز لود نشده‌ن، یه لحظه صبر کن');
+      return;
+    }
+
+    // ← به‌جای kExpenseCategories ثابت، لیست GlassOption رو از روی
+    // دسته‌های واقعی دیتابیس می‌سازیم (آیکون هر دسته با iconFromName
+    // از رشته‌ی ذخیره‌شده توی دیتابیس بازسازی میشه).
+    final options = _categories
+        .map((c) => GlassOption(iconFromName(c.icon), c.name))
+        .toList();
+
     final i = await showGlassOptionSheet(
       context,
       title: 'انتخاب دسته',
-      options: kExpenseCategories,
-      selected: _category,
+      options: options,
+      selected: _categoryIndex,
     );
-    if (i != null && mounted) setState(() => _category = i);
+    if (i != null && mounted) setState(() => _categoryIndex = i);
   }
 
   Future<void> _pickStart() async {
@@ -73,9 +110,12 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     if (d != null && mounted) setState(() => _end = d);
   }
 
-  void _save() {
+  // ← دیگه فقط اسنک‌بار نمی‌زنه؛ واقعاً توی دیتابیس ذخیره می‌کنه.
+  Future<void> _save() async {
     final amount = parseAmount(_amountCtrl.text);
-    if (_category == null) {
+    final category = _selectedCategory;
+
+    if (category == null) {
       showGlassSnack(context, 'دسته رو انتخاب کن');
       return;
     }
@@ -83,16 +123,29 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
       showGlassSnack(context, 'سقف بودجه رو وارد کن');
       return;
     }
-    // TODO: ذخیره‌ی واقعی بودجه:
-    // دسته: kExpenseCategories[_category!] ، سقف: amount ،
-    // ماهانه؟: _isMonthly ، شروع: _start ، پایان: _isMonthly ? null : _end
+    if (!_isMonthly && !_end.isAfter(_start)) {
+      showGlassSnack(context, 'تاریخ پایان باید بعد از تاریخ شروع باشه');
+      return;
+    }
+
+    // ← ذخیره‌ی واقعی. خودِ addBudget بعد از ذخیره، budgetsTicker رو
+    // صدا می‌زنه تا هر صفحه‌ای که لیست بودجه‌ها رو نشون میده، خودکار رفرش شه.
+    await addBudget(
+      categoryId: category.id,
+      amount: amount.toDouble(),
+      period: _isMonthly ? 'monthly' : 'custom',
+      startDate: _start,
+      endDate: _isMonthly ? null : _end,
+    );
+
+    if (!mounted) return;
     showGlassSnack(context, 'بودجه ذخیره شد');
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cat = _category == null ? null : kExpenseCategories[_category!];
+    final cat = _selectedCategory;
     final sliderValue = parseAmount(
       _amountCtrl.text,
     ).clamp(0, _sliderMax).toDouble();
@@ -110,9 +163,11 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
         GlassGroup(
           children: [
             GlassTile(
-              icon: cat?.icon ?? Icons.category_outlined,
+              icon: cat == null
+                  ? Icons.category_outlined
+                  : iconFromName(cat.icon),
               title: 'دسته',
-              subtitle: cat?.label ?? 'انتخاب کن',
+              subtitle: cat?.name ?? 'انتخاب کن',
               onTap: _pickCategory,
             ),
           ],

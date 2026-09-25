@@ -375,3 +375,11 @@ class GlassSaveButton extends StatelessWidget {
     );
   }
 }
+
+/// فقط ماه و سال رو به شمسی نشون میده (بدون روز)، مثلاً «شهریور ۱۴۰۵».
+/// برای نمایش «ماه انتخاب‌شده» توی صفحه‌ی بودجه استفاده میشه؛
+/// چون خودِ تاریخ داخلی همچنان میلادیه (day=1)، فقط نمایشش شمسیه.
+String formatJalaliMonth(DateTime d) {
+  final j = gregorianToJalali(d.year, d.month, 1);
+  return '${_jalaliMonths[j[1] - 1]} ${toPersianDigits(j[0].toString())}';
+}

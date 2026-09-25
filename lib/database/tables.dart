@@ -18,3 +18,16 @@ class Transactions extends Table {
   )(); //with default means if user dont write any note this property use '' for default
   TextColumn get type => text()(); // 'income' یا 'expense'
 }
+
+class Budgets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get categoryId =>
+      integer().nullable().references(Categories, #id)();
+  RealColumn get amount => real()();
+  TextColumn get period => text()(); // 'week' / 'month' / 'year'
+  DateTimeColumn get startDate => dateTime()();
+  // ← ستون جدید: فقط برای حالت 'custom' مقدار داره.
+  // برای بودجه‌ی ماهانه، نیازی نیست چون خودمون از startDate
+  // بازه‌ی همون ماه رو حساب می‌کنیم.
+  DateTimeColumn get endDate => dateTime().nullable()();
+}

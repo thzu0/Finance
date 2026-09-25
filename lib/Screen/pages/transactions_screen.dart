@@ -1,5 +1,8 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/database/database_provider.dart';
+import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +10,10 @@ import 'package:flutter/material.dart';
 enum TxType { income, expense }
 
 class _Tx {
+  // ← فیلد جدید: id واقعی ردیف توی دیتابیس.
+  // بدون این، وقتی کاربر نگه می‌داره و می‌خواد حذف کنه،
+  // نمی‌دونیم دقیقاً کدوم ردیف دیتابیس رو باید پاک کنیم.
+  final int id;
   final String title;
   final String category;
   final int amount;
@@ -17,6 +24,7 @@ class _Tx {
   final bool isToday;
 
   const _Tx({
+    required this.id,
     required this.title,
     required this.category,
     required this.amount,
@@ -43,69 +51,61 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   // 0 = همه ، 1 = درآمد ، 2 = هزینه
   int _selectedTab = 0;
 
-  // داده‌ی نمونه، بعداً با داده‌ی واقعی عوضش کن
-  final List<_Tx> _items = const [
-    _Tx(
-      title: 'کافه',
-      category: 'خورد و خوراک',
-      amount: 65000,
-      time: '10:24',
-      icon: Icons.local_cafe,
-      color: Color(0xFF14B8A6),
-      type: TxType.expense,
-      isToday: true,
-    ),
-    _Tx(
-      title: 'حقوق',
-      category: 'درآمد',
-      amount: 12000000,
-      time: '09:00',
-      icon: Icons.account_balance_wallet,
-      color: Color(0xFF22C55E),
-      type: TxType.income,
-      isToday: true,
-    ),
-    _Tx(
-      title: 'اسنپ',
-      category: 'حمل و نقل',
-      amount: 124000,
-      time: '08:12',
-      icon: Icons.directions_car,
-      color: Color(0xFF3B82F6),
-      type: TxType.expense,
-      isToday: true,
-    ),
-    _Tx(
-      title: 'دیجی‌کالا',
-      category: 'خرید',
-      amount: 899000,
-      time: '19:45',
-      icon: Icons.shopping_bag,
-      color: Color(0xFFF97316),
-      type: TxType.expense,
-      isToday: false,
-    ),
-    _Tx(
-      title: 'نتفلیکس',
-      category: 'سرگرمی',
-      amount: 159000,
-      time: '18:20',
-      icon: Icons.movie,
-      color: Color(0xFFE11D48),
-      type: TxType.expense,
-      isToday: false,
-    ),
-    _Tx(
-      title: 'داروخانه',
-      category: 'سلامت',
-      amount: 200000,
-      time: '16:10',
-      icon: Icons.health_and_safety,
-      color: Color(0xFF10B981),
-      type: TxType.expense,
-      isToday: false,
-    ),
-  ];
+  List<_Tx> _items = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+    // هر وقت transactionsTicker عوض بشه (یه تراکنش اضافه یا حذف شد)،
+    // دوباره از دیتابیس می‌خونیم تا لیست بدون نیاز به ری‌استارت آپدیت شه.
+    transactionsTicker.addListener(_loadTransactions);
+  }
+
+  // ← متد جدید: وقتی این صفحه از بین میره (dispose میشه)،
+  // باید گوش‌دادن به ticker رو قطع کنیم، وگرنه یه Listener
+  // بی‌مصرف توی حافظه باقی می‌مونه (memory leak).
+  // این متد قبلاً توی فایلت نبود.
+  @override
+  void dispose() {
+    transactionsTicker.removeListener(_loadTransactions);
+    super.dispose();
+  }
+
+  Future<void> _loadTransactions() async {
+    final rows = await getAllTransactions();
+    final now = DateTime.now();
+
+    final list = rows.map((r) {
+      final t = r.transaction;
+      final c = r.category;
+      final isToday =
+          t.date.year == now.year &&
+          t.date.month == now.month &&
+          t.date.day == now.day;
+
+      return _Tx(
+        id: t.id, // ← اضافه شد: همون id ردیف توی جدول transactions
+        title: t.note.isNotEmpty ? t.note : c.name,
+        category: c.name,
+        amount: t.amount.toInt(),
+        time:
+            '${t.date.hour.toString().padLeft(2, '0')}:${t.date.minute.toString().padLeft(2, '0')}',
+        icon: iconFromName(c.icon),
+        color: hexToColor(c.color),
+        type: t.type == 'income' ? TxType.income : TxType.expense,
+        isToday: isToday,
+      );
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _items = list;
+        _loading = false;
+      });
+    }
+  }
 
   List<_Tx> _filtered(bool today) {
     return _items.where((t) {
@@ -124,6 +124,139 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
       b.write(s[i]);
     }
     return b.toString();
+  }
+
+  /// وقتی کاربر روی یه تراکنش نگه می‌داره، این باتم‌شیت باز میشه.
+  /// طراحیش هماهنگ با ظاهر شیشه‌ای بقیه‌ی اپ (پس‌زمینه‌ی تیره + گوشه‌های گرد + فونت Lalezar).
+  /// اگه کاربر "حذف" رو زد: هم از دیتابیس پاک میشه، هم فوراً از لیست محلی حذف میشه.
+  Future<void> _confirmDelete(_Tx t) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            decoration: BoxDecoration(
+              color: Constans.background,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _blue.withValues(alpha: 0.25)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // دستگیره‌ی بالای باتم‌شیت (فقط تزئینیه)
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Constans.textSecondary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // آیکون هشدار
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _expense.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.delete_outline, color: _expense, size: 28),
+                ),
+                const SizedBox(height: 14),
+
+                Text(
+                  'حذف این تراکنش؟',
+                  style: TextStyle(
+                    fontFamily: 'Lalezar',
+                    fontSize: 20,
+                    color: Constans.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t.title,
+                  style: TextStyle(
+                    fontFamily: 'Lalezar',
+                    fontSize: 15,
+                    color: Constans.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 22),
+
+                Row(
+                  children: [
+                    // دکمه‌ی انصراف
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, false),
+                        child: Container(
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Constans.textSecondary.withValues(
+                              alpha: 0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            'انصراف',
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 16,
+                              color: Constans.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // دکمه‌ی حذف
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, true),
+                        child: Container(
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _expense,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text(
+                            'حذف',
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (ok == true) {
+      await deleteTransaction(t.id);
+      if (mounted) {
+        setState(() {
+          _items.removeWhere((x) => x.id == t.id);
+        });
+      }
+    }
   }
 
   @override
@@ -159,23 +292,22 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
       ),
       body: AppGlowBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: <Widget>[
-                // اگه سرچ‌باکس رفت زیر تیتر، این خط رو از کامنت دربیار:
-                // const SizedBox(height: 80),
-                _buildSearchRow(),
-                const SizedBox(height: 25),
-                _buildTabBar(),
-                const SizedBox(height: 5),
-                _buildSection('امروز', _filtered(true)),
-                const SizedBox(height: 10),
-                _buildSection('دیروز', _filtered(false)),
-                // فاصله برای اینکه زیر بتم‌نویگیشن نره
-                const SizedBox(height: 110),
-              ],
-            ),
-          ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Column(
+                    children: <Widget>[
+                      _buildSearchRow(),
+                      const SizedBox(height: 25),
+                      _buildTabBar(),
+                      const SizedBox(height: 5),
+                      _buildSection('امروز', _filtered(true)),
+                      const SizedBox(height: 10),
+                      _buildSection('قبلی', _filtered(false)),
+                      const SizedBox(height: 110),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
@@ -290,7 +422,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     );
   }
 
-  // ───────────── هر بخش (امروز / دیروز) ─────────────
+  // ───────────── هر بخش (امروز / قبلی) ─────────────
   Widget _buildSection(String title, List<_Tx> items) {
     if (items.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -338,93 +470,99 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     final isIncome = t.type == TxType.income;
     final amountColor = isIncome ? _income : _expense;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Row(
-          children: [
-            // آیکون
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: t.color.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(16),
+    // ← تغییر اصلی اینجاست: کل محتوای قبلی رو با GestureDetector پیچیدیم
+    // تا onLongPress بگیره. هر وقت کاربر انگشتش رو نگه داره،
+    // _confirmDelete(t) صدا زده میشه.
+    return GestureDetector(
+      onLongPress: () => _confirmDelete(t),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Row(
+            children: [
+              // آیکون
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: t.color.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(t.icon, color: Colors.white, size: 24),
               ),
-              child: Icon(t.icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-            // عنوان و دسته
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t.title,
-                    style: TextStyle(
-                      fontFamily: 'Lalezar',
-                      fontSize: 19,
-                      color: Constans.textPrimary,
+              // عنوان و دسته
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t.title,
+                      style: TextStyle(
+                        fontFamily: 'Lalezar',
+                        fontSize: 19,
+                        color: Constans.textPrimary,
+                      ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      t.category,
+                      style: TextStyle(
+                        fontFamily: 'Lalezar',
+                        fontSize: 14,
+                        color: Constans.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // مبلغ و ساعت
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _fmt(t.amount).farsiNumber,
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          fontFamily: 'Lalezar',
+                          fontSize: 17,
+                          color: amountColor,
+                        ),
+                      ),
+                      SizedBox(width: 5),
+                      Image.asset(
+                        isIncome
+                            ? 'assets/images/toman_green.png'
+                            : 'assets/images/toman_red.png',
+
+                        width: 25,
+                        height: 20,
+                        filterQuality: FilterQuality.high,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    t.category,
+                    t.time.farsiNumber,
+                    textDirection: TextDirection.ltr,
                     style: TextStyle(
                       fontFamily: 'Lalezar',
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Constans.textSecondary,
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // مبلغ و ساعت
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _fmt(t.amount).farsiNumber,
-                      textDirection: TextDirection.ltr,
-                      style: TextStyle(
-                        fontFamily: 'Lalezar',
-                        fontSize: 17,
-                        color: amountColor,
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    Image.asset(
-                      isIncome
-                          ? 'assets/images/toman_green.png'
-                          : 'assets/images/toman_red.png',
-
-                      width: 25,
-                      height: 20,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  t.time.farsiNumber,
-                  textDirection: TextDirection.ltr,
-                  style: TextStyle(
-                    fontFamily: 'Lalezar',
-                    fontSize: 13,
-                    color: Constans.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      ), // ← بستن Padding
+    ); // ← بستن GestureDetector
   }
 }
