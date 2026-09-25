@@ -1,20 +1,65 @@
+//todos make the all budget card in main page correct and fix the number in this card
+//todos write balance about last month again and make this chart real
+//todos make this month card be real with database with milion or hezar currency
+//todos make donut chart real with database
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Screen/button_page/add_transaction.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
+import 'package:finance/database/database_provider.dart'; // ← اضافه شد
+import 'package:finance/database/transaction_repository.dart'; // ← اضافه شد
 import 'package:finance/widget/build_action_button_widget.dart';
 import 'package:finance/widget/fl_chart.dart';
+import 'package:finance/widget/form_widget.dart'; // ← اضافه شد (برای formatAmount)
 import 'package:finance/widget/month_card_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
-class BuildHomePage extends StatelessWidget {
+// ← تغییر کرد: از StatelessWidget به StatefulWidget، چون باید async
+// از دیتابیس بخونیم و به تغییرات گوش بدیم.
+class BuildHomePage extends StatefulWidget {
   const BuildHomePage({super.key, required this.size});
 
   final Size size;
 
   @override
+  State<BuildHomePage> createState() => _BuildHomePageState();
+}
+
+class _BuildHomePageState extends State<BuildHomePage> {
+  double _balance = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+    // هر وقت تراکنشی (دستی یا بعداً از SMS) اضافه/حذف بشه، موجودی
+    // خودکار دوباره محاسبه میشه.
+    transactionsTicker.addListener(_loadBalance);
+  }
+
+  @override
+  void dispose() {
+    transactionsTicker.removeListener(_loadBalance);
+    super.dispose();
+  }
+
+  Future<void> _loadBalance() async {
+    final b = await getTotalBalance();
+    if (mounted) {
+      setState(() {
+        _balance = b;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final size =
+        widget.size; // ← تغییر کرد: قبلاً پارامتر مستقیم بود، الان widget.size
+
     return SingleChildScrollView(
       child: Column(
         children: <Widget>[
@@ -89,52 +134,39 @@ class BuildHomePage extends StatelessWidget {
                           const SizedBox(width: 5),
                           Padding(
                             padding: const EdgeInsets.only(top: 10, right: 15),
-                            child: Text(
-                              '۲,۴۵۰.۰۰',
-                              textDirection: TextDirection.rtl,
-                              style: TextStyle(
-                                fontFamily: 'Vazirmatn',
-                                color: Colors.white,
-                                fontSize: 38,
-                                fontWeight: FontWeight.bold,
+                            // ← اضافه شد: عرض مبلغ محدود میشه تا هیچوقت وارد محدوده‌ی
+                            // چارت (که سمت چپ، تا size.width * 0.45 پیش میاد) نشه.
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: size.width * 0.5,
+                              ),
+                              // ← اضافه شد: اگه عدد جا نشد، به‌جای سرریز کردن، خودش
+                              // کوچیک‌تر میشه (فونت رو خودکار کوچیک می‌کنه).
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  _loading
+                                      ? '...'
+                                      : formatAmount(_balance.round()),
+                                  textDirection: TextDirection.rtl,
+                                  style: TextStyle(
+                                    fontFamily: 'Vazirmatn',
+                                    color: Colors.white,
+                                    fontSize: 38,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10, right: 15.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: <Widget>[
-                            Text(
-                              'نسبت به ماه قبل',
-                              style: TextStyle(
-                                color: Constans.success,
-                                fontFamily: 'Vazirmatn',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              '%۴۵',
-                              style: TextStyle(
-                                fontFamily: 'Vazirmatn',
-                                color: Constans.success,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(width: 3),
-                            Icon(
-                              Icons.arrow_circle_up,
-                              color: Constans.success,
-                            ),
-                          ],
-                        ),
-                      ),
+                      // ← حذف شد: ردیف «نسبت به ماه قبل / ٪۴۵» چون
+                      // عدد ثابت و بی‌ربط به دیتای واقعی بود. اگه
+                      // بعداً خواستی این مقایسه رو هم واقعی کنیم
+                      // (مثلاً نسبت به ماه قبل)، بگو یه تابع جدا
+                      // براش می‌نویسیم.
                     ],
                   ),
                 ],
@@ -170,7 +202,8 @@ class BuildHomePage extends StatelessWidget {
                   press: () => Navigator.push(
                     context,
                     PageTransition(
-                      child: const AddTransactionScreen(),
+                      // ← تغییر کرد: initialTab: 0 اضافه شد (هزینه)
+                      child: const AddTransactionScreen(initialTab: 0),
                       type: PageTransitionType.fade,
                     ),
                   ),
@@ -182,7 +215,8 @@ class BuildHomePage extends StatelessWidget {
                   press: () => Navigator.push(
                     context,
                     PageTransition(
-                      child: const AddTransactionScreen(),
+                      // ← تغییر کرد: initialTab: 1 اضافه شد (درآمد)
+                      child: const AddTransactionScreen(initialTab: 1),
                       type: PageTransitionType.fade,
                     ),
                   ),
@@ -208,7 +242,6 @@ class BuildHomePage extends StatelessWidget {
                   color: Constans.border.withValues(alpha: 0.45),
                   width: 0.85,
                 ),
-
                 color: Constans.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -282,13 +315,11 @@ class BuildHomePage extends StatelessWidget {
                   color: Constans.border.withValues(alpha: 0.45),
                   width: 0.85,
                 ),
-
                 color: Constans.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment
-                    .end, // همون چیزی که تو کارت "این ماه" داشتی
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 10),

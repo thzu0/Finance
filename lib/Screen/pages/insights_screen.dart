@@ -6,7 +6,6 @@ import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 // ← اضافه شد: برای گوش دادن به تغییرات دیتابیس (transactionsTicker)
 import 'package:finance/database/database_provider.dart';
