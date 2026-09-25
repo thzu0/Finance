@@ -217,9 +217,9 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => _shiftMonth(-1),
+            onPressed: () => _shiftMonth(1),
             icon: Icon(
-              Icons.chevron_right,
+              Icons.chevron_left,
               color: Constans.textSecondary,
               size: 28,
             ),
@@ -236,9 +236,9 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
             ),
           ),
           IconButton(
-            onPressed: () => _shiftMonth(1),
+            onPressed: () => _shiftMonth(-1),
             icon: Icon(
-              Icons.chevron_left,
+              Icons.chevron_right,
               color: Constans.textSecondary,
               size: 28,
             ),
