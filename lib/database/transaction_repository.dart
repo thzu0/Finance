@@ -162,3 +162,26 @@ Future<MonthSummary> getMonthSummary(DateTime reference) async {
     prevExpense: prevExpense,
   );
 }
+
+class TrendPoint {
+  final DateTime date;
+  final double balance;
+  TrendPoint(this.date, this.balance);
+}
+
+/// موجودی تجمعی برای هر یک از N روز اخیر (شامل امروز)، همراه با تاریخ هر نقطه
+Future<List<TrendPoint>> getBalanceTrend(int days) async {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final result = <TrendPoint>[];
+
+  for (int i = days - 1; i >= 0; i--) {
+    final day = today.subtract(Duration(days: i));
+    final endOfDay = day.add(const Duration(days: 1));
+    final income = await _sumByTypeBefore('income', endOfDay);
+    final expense = await _sumByTypeBefore('expense', endOfDay);
+    result.add(TrendPoint(day, income - expense));
+  }
+
+  return result;
+}

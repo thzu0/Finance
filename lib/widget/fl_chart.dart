@@ -1,33 +1,82 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/database/transaction_repository.dart';
+import 'package:finance/widget/form_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class FlChart extends StatefulWidget {
+class FlChart extends StatelessWidget {
   final double height;
-  const FlChart({super.key, this.height = 140});
+  final List<TrendPoint> points; // ← تغییر کرد: به‌جای List<double>
 
-  @override
-  State<FlChart> createState() => _FlChartState();
-}
+  const FlChart({super.key, this.height = 140, required this.points});
 
-class _FlChartState extends State<FlChart> {
   @override
   Widget build(BuildContext context) {
-    final rawData = [10, 14, 11, 17, 15, 22, 19, 27, 24, 32, 35, 40];
+    if (points.length < 2) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Text(
+            'داده‌ی کافی برای نمودار نیست',
+            style: TextStyle(
+              fontFamily: 'Vazirmatn',
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
-      height: widget.height,
+      height: height,
       child: LineChart(
         LineChartData(
           gridData: FlGridData(show: false),
           titlesData: FlTitlesData(show: false),
           borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(enabled: false),
+          // ← تغییر کرد: قبلاً enabled: false بود؛ حالا لمس فعاله
+          // و یه باکس راهنما (تولتیپ) نشون میده.
+          lineTouchData: LineTouchData(
+            enabled: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (spot) => Constans.background,
+              tooltipBorder: BorderSide(
+                color: Constans.electricBlue.withValues(alpha: 0.5),
+              ),
+
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  final point = points[spot.x.toInt()];
+                  return LineTooltipItem(
+                    '\u200F${formatJalali(point.date)}\n', // ← \u200F اضافه شد
+                    TextStyle(
+                      fontFamily: 'Lalezar',
+                      fontSize: 12,
+                      color: Colors.white,
+                    ),
+                    children: [
+                      TextSpan(
+                        text:
+                            '\u200F${formatAmount(point.balance.round())} تومان', // ← اینجا هم
+                        style: TextStyle(
+                          fontFamily: 'Vazirmatn',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Constans.electricBlue,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+            ),
+          ),
           lineBarsData: [
             LineChartBarData(
               spots: List.generate(
-                rawData.length,
-                (i) => FlSpot(i.toDouble(), rawData[i].toDouble()),
+                points.length,
+                (i) => FlSpot(i.toDouble(), points[i].balance),
               ),
               isCurved: true,
               curveSmoothness: 0.35,
@@ -35,9 +84,7 @@ class _FlChartState extends State<FlChart> {
               barWidth: 2.5,
               dotData: FlDotData(
                 show: true,
-                checkToShowDot: (spot, barData) =>
-                    spot ==
-                    barData.spots.last, // دات روی نقطه‌ی آخر (سمت چپ چارت)
+                checkToShowDot: (spot, barData) => spot == barData.spots.last,
                 getDotPainter: (spot, percent, bar, index) =>
                     FlDotCirclePainter(
                       radius: 5,

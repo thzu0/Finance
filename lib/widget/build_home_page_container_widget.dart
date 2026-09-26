@@ -5,18 +5,17 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Screen/button_page/add_transaction.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
-import 'package:finance/database/database_provider.dart'; // ← اضافه شد
-import 'package:finance/database/transaction_repository.dart'; // ← اضافه شد
+import 'package:finance/database/database_provider.dart';
+import 'package:finance/database/transaction_repository.dart';
+import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/build_action_button_widget.dart';
 import 'package:finance/widget/fl_chart.dart';
-import 'package:finance/widget/form_widget.dart'; // ← اضافه شد (برای formatAmount)
+import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/month_card_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
-// ← تغییر کرد: از StatelessWidget به StatefulWidget، چون باید async
-// از دیتابیس بخونیم و به تغییرات گوش بدیم.
 class BuildHomePage extends StatefulWidget {
   const BuildHomePage({super.key, required this.size});
 
@@ -27,38 +26,85 @@ class BuildHomePage extends StatefulWidget {
 }
 
 class _BuildHomePageState extends State<BuildHomePage> {
+  List<TrendPoint> _trend = [];
   double _balance = 0;
+  double _balanceChangePercent = 0;
+  bool _balanceUp = true;
+
+  double _income = 0, _expense = 0, _savings = 0;
+  int _incomePercent = 0, _expensePercent = 0, _savingsPercent = 0;
+  bool _incomeUp = true, _expenseUp = false, _savingsUp = true;
+
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadBalance();
-    // هر وقت تراکنشی (دستی یا بعداً از SMS) اضافه/حذف بشه، موجودی
-    // خودکار دوباره محاسبه میشه.
-    transactionsTicker.addListener(_loadBalance);
+    _loadAll();
+    transactionsTicker.addListener(_loadAll);
   }
 
   @override
   void dispose() {
-    transactionsTicker.removeListener(_loadBalance);
+    transactionsTicker.removeListener(_loadAll);
     super.dispose();
   }
 
-  Future<void> _loadBalance() async {
-    final b = await getTotalBalance();
+  Future<void> _loadAll() async {
+    final now = DateTime.now();
+    final balance = await getTotalBalance();
+    final summary = await getMonthSummary(now);
+    final trend = await getBalanceTrend(7); // ۷ روز اخیر
+    final monthStartBalance = await getBalanceBeforeDate(
+      DateTime(now.year, now.month, 1),
+    );
+
     if (mounted) {
       setState(() {
-        _balance = b;
+        _balance = balance;
+
+        if (monthStartBalance == 0) {
+          _balanceChangePercent = 0;
+          _balanceUp = true;
+        } else {
+          final ratio = (balance - monthStartBalance) / monthStartBalance.abs();
+          _balanceChangePercent = (ratio.abs() * 100);
+          _balanceUp = ratio >= 0;
+        }
+
+        _income = summary.income;
+        _expense = summary.expense;
+        _savings = summary.savings;
+
+        _incomePercent = summary.prevIncome == 0
+            ? 0
+            : (((summary.income - summary.prevIncome) / summary.prevIncome) *
+                      100)
+                  .round();
+        _incomeUp = summary.income >= summary.prevIncome;
+
+        _expensePercent = summary.prevExpense == 0
+            ? 0
+            : (((summary.expense - summary.prevExpense) / summary.prevExpense) *
+                      100)
+                  .round();
+        _expenseUp = summary.expense <= summary.prevExpense;
+
+        _savingsPercent = summary.income == 0
+            ? 0
+            : ((summary.savings / summary.income) * 100).round();
+        _savingsUp = summary.savings >= 0;
+
         _loading = false;
+
+        _trend = trend;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size =
-        widget.size; // ← تغییر کرد: قبلاً پارامتر مستقیم بود، الان widget.size
+    final size = widget.size;
 
     return SingleChildScrollView(
       child: Column(
@@ -70,7 +116,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
             ),
             child: Container(
               width: size.width,
-              constraints: BoxConstraints(minHeight: size.height * 0.165),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -88,86 +134,110 @@ class _BuildHomePageState extends State<BuildHomePage> {
                 ),
                 borderRadius: BorderRadius.circular(24.0),
               ),
-              child: Stack(
+              // ← دیگه Stack نیست: یه Column ساده که خودش بر اساس
+              // محتوای واقعی‌ش ارتفاع می‌گیره. هیچ عدد فرضی (مثل
+              // درصدهای قبلی 0.165 یا 0.22) لازم نیست.
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Positioned(
-                    left: 5,
-                    bottom: 8,
-                    right: size.width * 0.45,
-                    child: const FlChart(),
-                  ),
-                  Column(
-                    children: <Widget>[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 15, right: 5),
-                            child: Icon(
-                              Icons.remove_red_eye_outlined,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 15, right: 15),
-                            child: Text(
-                              'موجودی کل',
-                              textDirection: TextDirection.rtl,
-                              style: TextStyle(
-                                fontFamily: 'Vazirmatn',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 20,
-                                color: Constans.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.remove_red_eye_outlined,
+                        color: Colors.white,
+                        size: 18,
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          SizedBox(
-                            height: 30.0,
-                            child: Image.asset('assets/images/toman_white.png'),
-                          ),
-                          const SizedBox(width: 5),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10, right: 15),
-                            // ← اضافه شد: عرض مبلغ محدود میشه تا هیچوقت وارد محدوده‌ی
-                            // چارت (که سمت چپ، تا size.width * 0.45 پیش میاد) نشه.
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: size.width * 0.5,
-                              ),
-                              // ← اضافه شد: اگه عدد جا نشد، به‌جای سرریز کردن، خودش
-                              // کوچیک‌تر میشه (فونت رو خودکار کوچیک می‌کنه).
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  _loading
-                                      ? '...'
-                                      : formatAmount(_balance.round()),
-                                  textDirection: TextDirection.rtl,
-                                  style: TextStyle(
-                                    fontFamily: 'Vazirmatn',
-                                    color: Colors.white,
-                                    fontSize: 38,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 6),
+                      Text(
+                        'موجودی کل',
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontFamily: 'Vazirmatn',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: Constans.textPrimary,
+                        ),
                       ),
-                      // ← حذف شد: ردیف «نسبت به ماه قبل / ٪۴۵» چون
-                      // عدد ثابت و بی‌ربط به دیتای واقعی بود. اگه
-                      // بعداً خواستی این مقایسه رو هم واقعی کنیم
-                      // (مثلاً نسبت به ماه قبل)، بگو یه تابع جدا
-                      // براش می‌نویسیم.
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  // ← مبلغ حالا عرض کامل کارت رو داره (چارت دیگه
+                  // کنارش نیست)، پس FittedBox همیشه فضای زیادی برای
+                  // جا شدن داره، حتی برای اعداد خیلی بزرگ.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _loading ? '...' : formatAmount(_balance.round()),
+                          textDirection: TextDirection.rtl,
+                          style: TextStyle(
+                            fontFamily: 'Vazirmatn',
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          height: 26,
+                          child: Image.asset('assets/images/toman_white.png'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!_loading && _balanceChangePercent > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'نسبت به اول ماه',
+                          style: TextStyle(
+                            color: _balanceUp
+                                ? Constans.success
+                                : Constans.expense,
+                            fontFamily: 'Vazirmatn',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '%${_balanceChangePercent.round()}'.farsiNumber,
+                          style: TextStyle(
+                            fontFamily: 'Vazirmatn',
+                            color: _balanceUp
+                                ? Constans.success
+                                : Constans.expense,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        Icon(
+                          _balanceUp
+                              ? Icons.arrow_circle_up
+                              : Icons.arrow_circle_down,
+                          color: _balanceUp
+                              ? Constans.success
+                              : Constans.expense,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  // ← چارت دیگه Positioned/overlap نیست؛ یه ردیف جدا
+                  // زیر بخش موجودی، با ارتفاع ثابت و عرض کامل.
+                  SizedBox(
+                    height: 60,
+                    width: double.infinity,
+                    child: FlChart(points: _trend),
                   ),
                 ],
               ),
@@ -194,7 +264,6 @@ class _BuildHomePageState extends State<BuildHomePage> {
                     ),
                   ),
                 ),
-
                 BuildActionButton(
                   label: 'افزودن هزینه',
                   color: Constans.expense,
@@ -202,7 +271,6 @@ class _BuildHomePageState extends State<BuildHomePage> {
                   press: () => Navigator.push(
                     context,
                     PageTransition(
-                      // ← تغییر کرد: initialTab: 0 اضافه شد (هزینه)
                       child: const AddTransactionScreen(initialTab: 0),
                       type: PageTransitionType.fade,
                     ),
@@ -215,7 +283,6 @@ class _BuildHomePageState extends State<BuildHomePage> {
                   press: () => Navigator.push(
                     context,
                     PageTransition(
-                      // ← تغییر کرد: initialTab: 1 اضافه شد (درآمد)
                       child: const AddTransactionScreen(initialTab: 1),
                       type: PageTransitionType.fade,
                     ),
@@ -267,9 +334,9 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.trending_up,
                           label: 'درآمد',
-                          amount: '۳,۲۰۰',
-                          percent: '%۱۲',
-                          isPositive: true,
+                          amount: formatAmount(_income.round()),
+                          percent: '%${_incomePercent.abs()}'.farsiNumber,
+                          isPositive: _incomeUp,
                           accentColor: Constans.success,
                         ),
                       ),
@@ -278,9 +345,9 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.trending_down,
                           label: 'هزینه',
-                          amount: '۷۵۰',
-                          percent: '%۶',
-                          isPositive: false,
+                          amount: formatAmount(_expense.round()),
+                          percent: '%${_expensePercent.abs()}'.farsiNumber,
+                          isPositive: _expenseUp,
                           accentColor: Constans.expense,
                         ),
                       ),
@@ -289,9 +356,9 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.savings_outlined,
                           label: 'پس‌انداز',
-                          amount: '۱,۴۵۰',
-                          percent: '%۱۸',
-                          isPositive: true,
+                          amount: formatAmount(_savings.round()),
+                          percent: '%${_savingsPercent.abs()}'.farsiNumber,
+                          isPositive: _savingsUp,
                           accentColor: Constans.electricBlue,
                         ),
                       ),
@@ -334,6 +401,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // ⚠️ هنوز داده‌ی ثابته — بعداً به insights_repository وصل می‌کنیم
                   SpendingOverview(
                     centerAmount: '۷۵۰',
                     categories: const [
