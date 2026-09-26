@@ -19,6 +19,11 @@ Future<void> seedCategoriesIfEmpty() async {
     ('سلامت', 'health_and_safety', '#8B5CF6'),
     ('قبض‌ها', 'receipt_long', '#EAB308'),
     ('آموزش', 'school', '#0EA5E9'),
+    // ← دسته‌های جدید
+    ('مسکن', 'home', '#059669'),
+    ('پوشاک', 'checkroom', '#DB2777'),
+    ('سفر', 'flight', '#0891B2'),
+
     ('سایر', 'more_horiz', '#6B7280'),
   ];
 
@@ -30,6 +35,7 @@ Future<void> seedCategoriesIfEmpty() async {
     ('فریلنس', 'laptop_mac'),
     ('هدیه', 'card_giftcard'),
     ('سرمایه‌گذاری', 'trending_up'),
+    ('پاداش', 'redeem'),
     ('سایر', 'more_horiz'),
   ];
 

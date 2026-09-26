@@ -3,6 +3,7 @@
 //todos make this month card be real with database with milion or hezar currency
 //todos make donut chart real with database
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Constans/extention.dart';
 import 'package:finance/Screen/button_page/add_transaction.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
 import 'package:finance/database/database_provider.dart';
@@ -26,6 +27,7 @@ class BuildHomePage extends StatefulWidget {
 }
 
 class _BuildHomePageState extends State<BuildHomePage> {
+  List<SpendingCategory> _spendingCategories = [];
   List<TrendPoint> _trend = [];
   double _balance = 0;
   double _balanceChangePercent = 0;
@@ -55,6 +57,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
     final balance = await getTotalBalance();
     final summary = await getMonthSummary(now);
     final trend = await getBalanceTrend(7); // ۷ روز اخیر
+    final spending = await getExpenseByCategory(now);
     final monthStartBalance = await getBalanceBeforeDate(
       DateTime(now.year, now.month, 1),
     );
@@ -98,6 +101,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
         _loading = false;
 
         _trend = trend;
+        _spendingCategories = spending;
       });
     }
   }
@@ -401,17 +405,32 @@ class _BuildHomePageState extends State<BuildHomePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // ⚠️ هنوز داده‌ی ثابته — بعداً به insights_repository وصل می‌کنیم
-                  SpendingOverview(
-                    centerAmount: '۷۵۰',
-                    categories: const [
-                      SpendingCategory(label: 'غذا و رستوران', percent: 37),
-                      SpendingCategory(label: 'حمل و نقل', percent: 20),
-                      SpendingCategory(label: 'خرید', percent: 16),
-                      SpendingCategory(label: 'سرگرمی', percent: 12),
-                      SpendingCategory(label: 'سایر', percent: 15),
-                    ],
-                  ),
+
+                  _spendingCategories.isEmpty
+                      ? SizedBox(
+                          height: 180,
+                          width: double.infinity,
+                          child: Center(
+                            child: Text(
+                              'هنوز هزینه‌ای ثبت نشده',
+                              style: TextStyle(
+                                fontFamily: 'Vazirmatn',
+                                color: Constans.textSecondary,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Builder(
+                          builder: (_) {
+                            final parts = formatShortAmountParts(_expense);
+                            return SpendingOverview(
+                              centerValue: _loading ? '...' : parts.value,
+                              centerUnit: _loading ? '' : parts.unit,
+                              categories: _spendingCategories,
+                            );
+                          },
+                        ),
                 ],
               ),
             ),

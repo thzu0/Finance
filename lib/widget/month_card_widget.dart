@@ -56,27 +56,30 @@ class MonthOverviewCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
 
-            children: [
-              Image.asset(
-                'assets/images/toman_white.png',
-                width: 20,
-                height: 25,
-                filterQuality: FilterQuality.high,
-              ),
-              SizedBox(width: 4),
-              Text(
-                amount,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Vazirmatn',
-                  color: Constans.textPrimary,
+              children: [
+                Image.asset(
+                  'assets/images/toman_white.png',
+                  width: 20,
+                  height: 25,
+                  filterQuality: FilterQuality.high,
                 ),
-              ),
-            ],
+                SizedBox(width: 4),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Vazirmatn',
+                    color: Constans.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           Row(

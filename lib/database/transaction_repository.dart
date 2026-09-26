@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:finance/widget/spending_donut_chart.dart';
 import 'app_database.dart';
 import 'database_provider.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart'; // ← اضافه شد
@@ -184,4 +185,83 @@ Future<List<TrendPoint>> getBalanceTrend(int days) async {
   }
 
   return result;
+}
+
+/// درصد تغییر بین مقدار فعلی و قبلی رو حساب می‌کنه.
+/// برمی‌گردونه: (متن درصد فرمت‌شده, آیا افزایش داشته؟)
+({String text, bool isIncrease}) calculatePercentChange(
+  double current,
+  double previous,
+) {
+  if (previous == 0) {
+    // ماه قبل چیزی نبوده؛ اگه الان چیزی هست یعنی ۱۰۰٪ افزایش، وگرنه بدون تغییر
+    if (current == 0) return (text: '۰٪', isIncrease: true);
+    return (text: '۱۰۰٪', isIncrease: true);
+  }
+
+  final change = ((current - previous) / previous) * 100;
+  final isIncrease = change >= 0;
+  final text = '${change.abs().toStringAsFixed(0)}٪';
+  return (text: text, isIncrease: isIncrease);
+}
+
+/// هزینه‌های ماه جاری (شمسی) رو بر اساس دسته‌بندی جمع می‌کنه
+/// و به‌صورت درصد از کل برمی‌گردونه (برای دونات صفحه‌ی اصلی)
+Future<List<SpendingCategory>> getExpenseByCategory(DateTime reference) async {
+  final j = Jalali.fromDateTime(reference);
+  final firstDay = Jalali(j.year, j.month, 1);
+  final monthStart = firstDay.toDateTime();
+  final monthEnd = Jalali(
+    j.year,
+    j.month,
+    firstDay.monthLength,
+  ).toDateTime().add(const Duration(days: 1));
+
+  final query =
+      database.selectOnly(database.transactions).join([
+          innerJoin(
+            database.categories,
+            database.categories.id.equalsExp(database.transactions.categoryId),
+          ),
+        ])
+        ..addColumns([
+          database.categories.name,
+          database.transactions.amount.sum(),
+        ])
+        ..where(database.transactions.type.equals('expense'))
+        ..where(database.transactions.date.isBiggerOrEqualValue(monthStart))
+        ..where(database.transactions.date.isSmallerThanValue(monthEnd))
+        ..groupBy([database.categories.id]);
+
+  final rows = await query.get();
+
+  final raw = rows
+      .map((row) {
+        final name = row.read(database.categories.name)!;
+        final sum = row.read(database.transactions.amount.sum()) ?? 0.0;
+        return MapEntry(name, sum);
+      })
+      .where((e) => e.value > 0)
+      .toList();
+
+  final total = raw.fold<double>(0, (a, b) => a + b.value);
+  if (total == 0) return [];
+
+  raw.sort((a, b) => b.value.compareTo(a.value));
+
+  // ← اگه بیش از ۴ دسته داشتیم، بقیه رو زیر «سایر» جمع می‌کنیم
+  List<MapEntry<String, double>> grouped;
+  if (raw.length > 4) {
+    final top = raw.take(4).toList();
+    final restSum = raw.skip(4).fold<double>(0, (a, b) => a + b.value);
+    grouped = [...top, MapEntry('سایر', restSum)];
+  } else {
+    grouped = raw;
+  }
+
+  return grouped
+      .map(
+        (e) => SpendingCategory(label: e.key, percent: (e.value / total) * 100),
+      )
+      .toList();
 }

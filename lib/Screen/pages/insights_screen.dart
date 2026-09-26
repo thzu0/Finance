@@ -575,8 +575,8 @@ class _InsightsscreenState extends State<Insightsscreen> {
           const SizedBox(width: 24),
           SpendingDonutChart(
             categories: d.categories,
-            centerAmount: amountText,
-            centerLabel: unitLabel,
+            centerValue: amountText, // ← تغییر کرد
+            centerUnit: unitLabel,
             size: 160,
           ),
         ],

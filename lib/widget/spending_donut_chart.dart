@@ -65,7 +65,8 @@ class CategoryColorProvider {
 // ==========================================
 class SpendingDonutChart extends StatelessWidget {
   final List<SpendingCategory> categories;
-  final String centerAmount;
+  final String centerValue;
+  final String centerUnit;
   final String centerLabel;
   final double size;
   final double seamWidth;
@@ -73,7 +74,8 @@ class SpendingDonutChart extends StatelessWidget {
   const SpendingDonutChart({
     super.key,
     required this.categories,
-    required this.centerAmount,
+    required this.centerValue,
+    required this.centerUnit,
     this.centerLabel = 'این ماه',
     this.size = 160,
     this.seamWidth = 0.015,
@@ -104,27 +106,25 @@ class SpendingDonutChart extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Image.asset(
-                  //   'assets/images/toman_white.png',
-                  //   width: 20,
-                  //   height: 25,
-                  //   filterQuality: FilterQuality.high,
-                  // ),
-                  SizedBox(width: 4),
-                  Text(
-                    centerAmount,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Constans.textPrimary,
-                      fontFamily: 'Vazirmatn',
-                    ),
-                  ),
-                ],
+              Text(
+                centerValue,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Constans.textPrimary,
+                  fontFamily: 'Vazirmatn',
+                ),
               ),
+              Text(
+                centerUnit,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Constans.textSecondary,
+                  fontFamily: 'Vazirmatn',
+                ),
+              ),
+              const SizedBox(height: 2),
               Text(
                 centerLabel,
                 style: TextStyle(
@@ -182,7 +182,9 @@ class SpendingLegend extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${cat.percent.toInt()}%'.farsiNumber,
+                cat.percent < 1
+                    ? '${cat.percent.toStringAsFixed(1)}%'.farsiNumber
+                    : '${cat.percent.round()}%'.farsiNumber,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -205,12 +207,14 @@ class SpendingLegend extends StatelessWidget {
 // ==========================================
 class SpendingOverview extends StatelessWidget {
   final List<SpendingCategory> categories;
-  final String centerAmount;
+  final String centerValue;
+  final String centerUnit;
 
   const SpendingOverview({
     super.key,
     required this.categories,
-    required this.centerAmount,
+    required this.centerValue,
+    required this.centerUnit,
   });
 
   @override
@@ -221,7 +225,8 @@ class SpendingOverview extends StatelessWidget {
         Expanded(child: SpendingLegend(categories: categories)),
         const SizedBox(width: 30),
         SpendingDonutChart(
-          centerAmount: centerAmount,
+          centerValue: centerValue,
+          centerUnit: centerUnit,
           categories: categories,
           size: 180,
         ),
@@ -265,9 +270,12 @@ class _DonutGradientPainter extends CustomPainter {
     for (int i = 0; i < colors.length; i++) {
       final start = boundaries[i];
       final end = boundaries[i + 1];
-      stops.add(i == 0 ? 0.0 : start + seamWidth / 2);
+      final sliceSize = end - start;
+      final seam = math.min(seamWidth, sliceSize * 0.3);
+
+      stops.add(i == 0 ? 0.0 : start + seam / 2);
       gradientColors.add(colors[i]);
-      stops.add(end - seamWidth / 2);
+      stops.add(end - seam / 2);
       gradientColors.add(colors[i]);
     }
     stops.add(1.0);

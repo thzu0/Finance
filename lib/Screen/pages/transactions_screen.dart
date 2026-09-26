@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
@@ -122,23 +124,119 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   Future<void> _confirmDelete(_Tx t) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Constans.background,
-        title: const Text('حذف تراکنش', textDirection: TextDirection.rtl),
-        content: const Text(
-          'مطمئنی می‌خوای این تراکنش حذف بشه؟',
-          textDirection: TextDirection.rtl,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              decoration: BoxDecoration(
+                color: Constans.surface.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Constans.border.withValues(alpha: 0.5),
+                  width: 1.2,
+                ),
+              ),
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: _expense.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: _expense,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'حذف تراکنش',
+                      style: TextStyle(
+                        fontFamily: 'Lalezar',
+                        fontSize: 20,
+                        color: Constans.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'مطمئنی می‌خوای این تراکنش حذف بشه؟',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Vazirmatn',
+                        fontSize: 14,
+                        color: Constans.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(ctx, false),
+                            child: Container(
+                              height: 46,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Constans.border.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              child: Text(
+                                'انصراف',
+                                style: TextStyle(
+                                  fontFamily: 'Vazirmatn',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: Constans.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(ctx, true),
+                            child: Container(
+                              height: 46,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _expense,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Text(
+                                'حذف',
+                                style: TextStyle(
+                                  fontFamily: 'Vazirmatn',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
 

@@ -467,7 +467,7 @@ Future<int?> showGlassOptionSheet(
     isScrollControlled: true,
     builder: (ctx) {
       // عرض هر آیتم: سه‌تا تو هر ردیف
-      final itemWidth = (MediaQuery.of(ctx).size.width - 40 - 24) / 3;
+      final itemWidth = (MediaQuery.of(ctx).size.width - 40 - 36) / 4;
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Container(
