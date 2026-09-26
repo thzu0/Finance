@@ -38,9 +38,9 @@ class AppGlowBackground extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    glowColor.withOpacity(0.7),
-                    glowColor.withOpacity(0.32),
-                    glowColor.withOpacity(0.0),
+                    glowColor.withValues(alpha: 0.7),
+                    glowColor.withValues(alpha: 0.32),
+                    glowColor.withValues(alpha: 0.0),
                   ],
                   stops: const [0.0, 0.45, 0.72],
                 ),
