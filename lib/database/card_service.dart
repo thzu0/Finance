@@ -6,7 +6,8 @@ class CardService {
 
   static final _s = AppSettings.instance;
 
-  /// ذخیره‌ی اطلاعات کارت
+  // ─── اطلاعات کارت ───
+
   Future<void> saveCard({
     required String number,
     required String holderName,
@@ -19,7 +20,6 @@ class CardService {
     await _s.set('card_bank', bankName);
   }
 
-  /// خوندن اطلاعات کارت
   Map<String, String> getCard() => {
     'number': _s.get<String>('card_number', ''),
     'holderName': _s.get<String>('card_holder', ''),
@@ -27,14 +27,19 @@ class CardService {
     'bankName': _s.get<String>('card_bank', ''),
   };
 
-  /// آیا کارتی ذخیره شده؟
   bool hasCard() => _s.get<String>('card_number', '').isNotEmpty;
 
-  /// حذف کارت
   Future<void> deleteCard() async {
     await _s.set('card_number', '');
     await _s.set('card_holder', '');
     await _s.set('card_expiry', '');
     await _s.set('card_bank', '');
+    await setSmsParsing(false);
   }
+
+  // ─── وضعیت خواندن پیامک ───
+
+  bool isSmsParsingEnabled() => _s.get<bool>('sms_parsing', false);
+
+  Future<void> setSmsParsing(bool enabled) => _s.set('sms_parsing', enabled);
 }

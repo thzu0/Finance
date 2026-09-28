@@ -15,3 +15,7 @@ final ValueNotifier<int> transactionsTicker = ValueNotifier(0);
 // ← جدید: هر وقت بودجه‌ای اضافه یا حذف شد (خودِ بودجه، نه تراکنش‌هاش)،
 // این مقدار عوض میشه تا Budgetsscreen خبردار شه و دوباره بخونه.
 final ValueNotifier<int> budgetsTicker = ValueNotifier(0);
+
+/// هر وقت اعلان جدیدی اضافه/خونده/حذف شد، این مقدار عوض می‌شه
+/// تا صفحه‌هایی که لیست اعلان‌ها یا badge رو نشون می‌دن refresh بشن.
+final ValueNotifier<int> notificationsTicker = ValueNotifier(0);

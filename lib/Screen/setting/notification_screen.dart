@@ -1,9 +1,14 @@
 // ignore: file_names
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/Screen/setting/notification_history_screen.dart'
+    show NotificationsHistoryScreen;
+
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 
 class Notificationsscreen extends StatefulWidget {
   const Notificationsscreen({super.key});
@@ -13,16 +18,21 @@ class Notificationsscreen extends StatefulWidget {
 }
 
 class _NotificationsscreenState extends State<Notificationsscreen> {
-  bool _enabled = true;
-  bool _daily = true;
-  TimeOfDay _time = const TimeOfDay(hour: 21, minute: 0);
-  bool _budgetAlert = true;
-  bool _tips = false;
-  bool _weekly = true;
-  bool _monthly = true;
+  final _s = AppSettings.instance;
+
+  late bool _enabled = _s.get<bool>('notif_enabled', true);
+  late bool _daily = _s.get<bool>('notif_daily', true);
+  late int _hour = _s.get<int>('notif_daily_hour', 21);
+  late int _minute = _s.get<int>('notif_daily_minute', 0);
+  late bool _budgetAlert = _s.get<bool>('notif_budget_alert', true);
+  late bool _tips = _s.get<bool>('notif_tips', false);
+  late bool _weekly = _s.get<bool>('notif_weekly', true);
+  late bool _monthly = _s.get<bool>('notif_monthly', true);
+
+  TimeOfDay get _time => TimeOfDay(hour: _hour, minute: _minute);
 
   String get _timeText =>
-      '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}'
+      '${_hour.toString().padLeft(2, '0')}:${_minute.toString().padLeft(2, '0')}'
           .farsiNumber;
 
   Future<void> _pickTime() async {
@@ -37,8 +47,23 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
       ),
     );
     if (t == null || !mounted) return;
-    setState(() => _time = t);
-    // TODO: زمان‌بندی دوباره‌ی یادآوری
+    setState(() {
+      _hour = t.hour;
+      _minute = t.minute;
+    });
+    await _s.set('notif_daily_hour', _hour);
+    await _s.set('notif_daily_minute', _minute);
+    // TODO فاز ۳: زمان‌بندی مجدد یادآور
+  }
+
+  void _openHistory() {
+    Navigator.push(
+      context,
+      PageTransition(
+        type: PageTransitionType.fade,
+        child: const NotificationsHistoryScreen(),
+      ),
+    );
   }
 
   @override
@@ -47,6 +72,19 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
       title: 'اعلان‌ها',
       children: [
         const SizedBox(height: 4),
+
+        // ─── دکمه‌ی مشاهده‌ی تاریخچه ───
+        GlassGroup(
+          children: [
+            GlassTile(
+              icon: Icons.history,
+              title: 'تاریخچه‌ی اعلان‌ها',
+              subtitle: 'همه‌ی اعلان‌های قبلی رو ببین',
+              onTap: _openHistory,
+            ),
+          ],
+        ),
+
         GlassGroup(
           children: [
             GlassSwitchTile(
@@ -54,11 +92,14 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
               title: 'دریافت اعلان‌ها',
               subtitle: 'خاموش کردنش همه‌ی اعلان‌ها رو قطع می‌کنه',
               value: _enabled,
-              onChanged: (v) => setState(() => _enabled = v),
+              onChanged: (v) async {
+                setState(() => _enabled = v);
+                await _s.set('notif_enabled', v);
+              },
             ),
           ],
         ),
-        // وقتی اعلان‌ها خاموشه، بقیه کم‌رنگ و غیرقابل لمس می‌شن
+
         Opacity(
           opacity: _enabled ? 1 : 0.4,
           child: IgnorePointer(
@@ -74,7 +115,10 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       title: 'یادآوری ثبت تراکنش‌ها',
                       subtitle: 'هر روز یادت می‌ندازه خرج‌هات رو ثبت کنی',
                       value: _daily,
-                      onChanged: (v) => setState(() => _daily = v),
+                      onChanged: (v) async {
+                        setState(() => _daily = v);
+                        await _s.set('notif_daily', v);
+                      },
                     ),
                     if (_daily)
                       GlassTile(
@@ -96,14 +140,20 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       title: 'هشدار بودجه',
                       subtitle: 'وقتی به ۸۰٪ سقف یه دسته رسیدی',
                       value: _budgetAlert,
-                      onChanged: (v) => setState(() => _budgetAlert = v),
+                      onChanged: (v) async {
+                        setState(() => _budgetAlert = v);
+                        await _s.set('notif_budget_alert', v);
+                      },
                     ),
                     GlassSwitchTile(
                       icon: Icons.lightbulb_outline,
                       title: 'پیشنهادهای هوشمند',
                       subtitle: 'نکته‌هایی برای کم کردن خرج',
                       value: _tips,
-                      onChanged: (v) => setState(() => _tips = v),
+                      onChanged: (v) async {
+                        setState(() => _tips = v);
+                        await _s.set('notif_tips', v);
+                      },
                     ),
                   ],
                 ),
@@ -115,18 +165,23 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       title: 'گزارش هفتگی',
                       subtitle: 'خلاصه‌ی خرج هفته، آخر هر هفته',
                       value: _weekly,
-                      onChanged: (v) => setState(() => _weekly = v),
+                      onChanged: (v) async {
+                        setState(() => _weekly = v);
+                        await _s.set('notif_weekly', v);
+                      },
                     ),
                     GlassSwitchTile(
                       icon: Icons.calendar_month_outlined,
                       title: 'خلاصه‌ی ماهانه',
                       subtitle: 'مرور خرج و درآمد ماه، اول هر ماه',
                       value: _monthly,
-                      onChanged: (v) => setState(() => _monthly = v),
+                      onChanged: (v) async {
+                        setState(() => _monthly = v);
+                        await _s.set('notif_monthly', v);
+                      },
                     ),
                   ],
                 ),
-                // TODO: زمان‌بندی واقعی اعلان‌ها (مثلا با flutter_local_notifications)
               ],
             ),
           ),

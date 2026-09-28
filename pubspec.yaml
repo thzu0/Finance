@@ -47,6 +47,7 @@ dependencies:
   crypto: 3.0.7
   local_auth: 3.0.2
   flutter_secure_storage: 11.2.0
+  permission_handler: ^12.0.0 # یا آخرین نسخه پایدار
 
 dev_dependencies:
   flutter_test:

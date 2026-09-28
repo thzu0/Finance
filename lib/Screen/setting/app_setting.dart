@@ -1,5 +1,7 @@
 // ignore: file_names
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/database/card_service.dart';
+import 'package:finance/services/sms_permission.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
@@ -17,8 +19,62 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
   int _digits = 0; // 0 = فارسی ، 1 = انگلیسی
   bool _hideAmounts = false;
   bool _haptic = true;
+  bool _smsEnabled = false;
 
   // TODO: همه‌ی این تنظیم‌ها رو جایی ذخیره کن (مثلا shared_preferences)
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSms();
+  }
+
+  Future<void> _checkSms() async {
+    final stillGranted = await SmsPermissionService.isStillGranted();
+    if (!mounted) return;
+    setState(() => _smsEnabled = stillGranted);
+  }
+
+  Future<void> _toggleSms(bool enable) async {
+    if (!enable) {
+      await SmsPermissionService.disable();
+      if (!mounted) return;
+      setState(() => _smsEnabled = false);
+      return;
+    }
+
+    if (!CardService.instance.hasCard()) {
+      showGlassSnack(context, 'اول توی صفحه‌ی کارت‌ها، کارتت رو ذخیره کن');
+      return;
+    }
+
+    final result = await SmsPermissionService.request();
+    if (!mounted) return;
+
+    switch (result) {
+      case SmsPermissionResult.granted:
+        setState(() => _smsEnabled = true);
+        showGlassSnack(context, 'خواندن خودکار پیامک فعال شد');
+        break;
+      case SmsPermissionResult.denied:
+        setState(() => _smsEnabled = false);
+        showGlassSnack(context, 'برای خواندن پیامک‌ها، دسترسی لازمه');
+        break;
+      case SmsPermissionResult.permanentlyDenied:
+        setState(() => _smsEnabled = false);
+        final goToSettings = await showGlassConfirm(
+          context,
+          title: 'دسترسی به پیامک',
+          message:
+              'برای خواندن خودکار پیامک‌ها، باید توی تنظیمات گوشی دسترسی بدی. الان بریم؟',
+          confirmText: 'برو به تنظیمات',
+        );
+        if (goToSettings) {
+          await SmsPermissionService.openSettings();
+        }
+        break;
+    }
+  }
 
   Future<void> _clearData() async {
     final ok = await showGlassConfirm(
@@ -81,6 +137,27 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               value: _haptic,
               onChanged: (v) => setState(() => _haptic = v),
             ),
+          ],
+        ),
+        const SectionLabel('پیامک‌ها'),
+        GlassGroup(
+          children: [
+            GlassSwitchTile(
+              icon: Icons.sms_outlined,
+              title: 'خواندن خودکار پیامک',
+              subtitle: _smsEnabled
+                  ? 'فعال — تراکنش‌های بانکی خودکار ثبت می‌شن'
+                  : 'غیرفعال — برای فعال‌سازی روشن کن',
+              value: _smsEnabled,
+              onChanged: _toggleSms,
+            ),
+            if (_smsEnabled)
+              const GlassTile(
+                icon: Icons.info_outline,
+                title: 'راهنما',
+                subtitle:
+                    'اپ فقط پیامک‌های بانکی رو می‌خونه و مبلغ و تاریخ رو استخراج می‌کنه.',
+              ),
           ],
         ),
         const SectionLabel('داده‌ها'),

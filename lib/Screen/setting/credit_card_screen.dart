@@ -3,12 +3,13 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/bank_bin_detector.dart';
 import 'package:finance/database/bank_theme.dart';
 import 'package:finance/database/card_service.dart';
+import 'package:finance/services/sms_permission.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // ═════════════════════════════════════════════
-// تابع کمکی: تبدیل ارقام فارسی/عربی به انگلیسی
+// تبدیل ارقام فارسی/عربی به انگلیسی
 // ═════════════════════════════════════════════
 String _normalizeDigits(String input) {
   const persian = '۰۱۲۳۴۵۶۷۸۹';
@@ -48,6 +49,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
   String _selectedBank = 'ملی';
   bool _hasSaved = false;
   bool _editing = false;
+  bool _smsEnabled = false;
   bool _numberFocused = false;
   bool _holderFocused = false;
   bool _expiryFocused = false;
@@ -59,6 +61,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
   void initState() {
     super.initState();
     _loadSaved();
+    _checkSmsPermission();
 
     _entryCtrl = AnimationController(
       vsync: this,
@@ -75,7 +78,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
 
   void _refresh() => setState(() {});
 
-  /// تشخیص خودکار بانک از روی شماره کارت
   void _onNumberChanged() {
     if (_hasSaved && !_editing) return;
 
@@ -86,6 +88,12 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     if (detectedBank != null && detectedBank != _selectedBank) {
       setState(() => _selectedBank = detectedBank);
     }
+  }
+
+  Future<void> _checkSmsPermission() async {
+    final stillGranted = await SmsPermissionService.isStillGranted();
+    if (!mounted) return;
+    setState(() => _smsEnabled = stillGranted);
   }
 
   void _loadSaved() {
@@ -143,7 +151,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     if (detectedBank == null) {
       showGlassSnack(
         context,
-        'این شماره کارت متعلق به بانک‌های شناخته‌شده نیست. بانک رو دستی انتخاب کن.',
+        'این شماره کارت متعلق به بانک‌های شناخته‌شده نیست.',
       );
       return;
     }
@@ -176,6 +184,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       danger: true,
     );
     if (!ok || !mounted) return;
+
     await _cardService.deleteCard();
     _numberCtrl.clear();
     _holderCtrl.clear();
@@ -184,9 +193,53 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     setState(() {
       _hasSaved = false;
       _editing = false;
+      _smsEnabled = false;
       _selectedBank = 'ملی';
     });
     showGlassSnack(context, 'کارت حذف شد');
+  }
+
+  // ─── سوییچ پیامک ───
+
+  Future<void> _toggleSmsParsing(bool enable) async {
+    if (!enable) {
+      await SmsPermissionService.disable();
+      if (!mounted) return;
+      setState(() => _smsEnabled = false);
+      return;
+    }
+
+    if (!_cardService.hasCard()) {
+      showGlassSnack(context, 'اول کارتت رو ذخیره کن');
+      return;
+    }
+
+    final result = await SmsPermissionService.request();
+    if (!mounted) return;
+
+    switch (result) {
+      case SmsPermissionResult.granted:
+        setState(() => _smsEnabled = true);
+        showGlassSnack(context, 'خواندن خودکار پیامک فعال شد');
+        break;
+      case SmsPermissionResult.denied:
+        setState(() => _smsEnabled = false);
+        showGlassSnack(context, 'برای خواندن پیامک‌ها، دسترسی لازمه');
+        break;
+      case SmsPermissionResult.permanentlyDenied:
+        setState(() => _smsEnabled = false);
+        final goToSettings = await showGlassConfirm(
+          context,
+          title: 'دسترسی به پیامک',
+          message:
+              'برای خواندن خودکار پیامک‌ها، باید توی تنظیمات گوشی دسترسی بدی. الان بریم؟',
+          confirmText: 'برو به تنظیمات',
+        );
+        if (goToSettings) {
+          await SmsPermissionService.openSettings();
+        }
+        break;
+    }
   }
 
   @override
@@ -316,6 +369,30 @@ class _CreditCardScreenState extends State<CreditCardScreen>
                   onTap: _save,
                   color: BankTheme.byName(_selectedBank).colorEnd,
                 ),
+        ),
+
+        // ─── خواندن خودکار پیامک ───
+        const SizedBox(height: 28),
+        const SectionLabel('خواندن خودکار پیامک'),
+        GlassGroup(
+          children: [
+            GlassSwitchTile(
+              icon: Icons.sms_outlined,
+              title: 'خواندن پیامک‌های بانکی',
+              subtitle: _smsEnabled
+                  ? 'فعال — تراکنش‌ها خودکار ثبت می‌شن'
+                  : 'غیرفعال — برای فعال‌سازی روشن کن',
+              value: _smsEnabled,
+              onChanged: _toggleSmsParsing,
+            ),
+            if (_smsEnabled)
+              const GlassTile(
+                icon: Icons.info_outline,
+                title: 'راهنما',
+                subtitle:
+                    'اپ فقط پیامک‌های بانکی رو می‌خونه و مبلغ و تاریخ رو استخراج می‌کنه.',
+              ),
+          ],
         ),
 
         const SizedBox(height: 100),
@@ -625,7 +702,7 @@ class _GlassField extends StatelessWidget {
                     keyboardType: keyboardType,
                     inputFormatters: formatters,
                     textDirection: textDirection,
-                    readOnly: !enabled, // ← readOnly به‌جای enabled
+                    readOnly: !enabled,
                     textAlign: textDirection == TextDirection.ltr
                         ? TextAlign.left
                         : TextAlign.right,
@@ -913,7 +990,7 @@ class _ExpiryFormatter extends TextInputFormatter {
     }
     if (digits.length > 2) {
       formatted +=
-          '/${digits.substring(2, digits.length > 4 ? 4 : digits.length)}';
+          '/' + digits.substring(2, digits.length > 4 ? 4 : digits.length);
     }
 
     return TextEditingValue(
