@@ -16,8 +16,8 @@ class Accountsecurityscreen extends StatefulWidget {
 
   const Accountsecurityscreen({
     super.key,
-    this.name = 'امیر',
-    this.email = 'amir@email.com',
+    this.name = 'بدون نام',
+    this.email = 'email@example.com',
   });
 
   @override

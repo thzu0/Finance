@@ -1,5 +1,4 @@
 import 'package:finance/Constans/constans.dart';
-
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/Screen/setting/about_us_screen.dart';
 import 'package:finance/Screen/setting/account_security_screen.dart';
@@ -8,6 +7,7 @@ import 'package:finance/Screen/setting/credit_card_screen.dart';
 import 'package:finance/Screen/setting/help_support_screen.dart';
 import 'package:finance/Screen/setting/language_screen.dart';
 import 'package:finance/Screen/setting/notification_screen.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
@@ -24,19 +24,41 @@ class _ProfileOption {
   });
 }
 
-class Profilescreen extends StatelessWidget {
-  final String name;
-  final String email;
-
+class Profilescreen extends StatefulWidget {
   // برای عکس پروفایل: AssetImage('assets/images/avatar.png') یا NetworkImage(...)
   final ImageProvider? avatar;
 
-  const Profilescreen({
-    super.key,
-    this.name = 'امیر',
-    this.email = 'amir@email.com',
-    this.avatar,
-  });
+  const Profilescreen({super.key, this.avatar});
+
+  @override
+  State<Profilescreen> createState() => _ProfilescreenState();
+}
+
+class _ProfilescreenState extends State<Profilescreen> {
+  final _s = AppSettings.instance;
+
+  late String _name = _s.get<String>('name', 'بدون نام');
+  late String _email = _s.get<String>('email', 'email@example.com');
+
+  @override
+  void initState() {
+    super.initState();
+    _s.changes.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    _s.changes.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _name = _s.get<String>('name', 'بدون نام');
+      _email = _s.get<String>('email', 'email@example.com');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +149,6 @@ class Profilescreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         leadingWidth: 72,
-        // آیکون تنظیمات بالا سمت چپ
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
           child: IconButton(
@@ -140,7 +161,7 @@ class Profilescreen extends StatelessWidget {
                 ),
               );
             },
-            icon: Icon(
+            icon: const Icon(
               Icons.settings_outlined,
               color: Constans.textPrimary,
               size: 28,
@@ -150,9 +171,9 @@ class Profilescreen extends StatelessWidget {
         actions: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+            children: const [
               Padding(
-                padding: const EdgeInsets.only(right: 15),
+                padding: EdgeInsets.only(right: 15),
                 child: Text(
                   'پروفایل',
                   textDirection: TextDirection.rtl,
@@ -175,12 +196,9 @@ class Profilescreen extends StatelessWidget {
               textDirection: TextDirection.rtl,
               child: Column(
                 children: <Widget>[
-                  // اگه محتوا رفت زیر تیتر، این خط رو از کامنت دربیار:
-                  // const SizedBox(height: 80),
                   _buildHeader(),
                   const SizedBox(height: 40),
                   _buildOptionsCard(options),
-                  // فاصله برای اینکه زیر بتم‌نویگیشن نره
                   const SizedBox(height: 110),
                 ],
               ),
@@ -197,7 +215,6 @@ class Profilescreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // عکس پروفایل با حلقه‌ی آبی
           Container(
             padding: const EdgeInsets.all(3),
             decoration: const BoxDecoration(
@@ -211,8 +228,8 @@ class Profilescreen extends StatelessWidget {
             child: CircleAvatar(
               radius: 45,
               backgroundColor: const Color(0xFF0B1B4A),
-              backgroundImage: avatar,
-              child: avatar == null
+              backgroundImage: widget.avatar,
+              child: widget.avatar == null
                   ? Icon(Icons.person, size: 40, color: Constans.textSecondary)
                   : null,
             ),
@@ -223,8 +240,8 @@ class Profilescreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
-                  style: TextStyle(
+                  _name,
+                  style: const TextStyle(
                     fontFamily: 'Lalezar',
                     fontSize: 30,
                     color: Constans.textPrimary,
@@ -232,9 +249,9 @@ class Profilescreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  email,
+                  _email,
                   textDirection: TextDirection.ltr,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Vazirmatn',
                     fontSize: 15,
                     color: Constans.textSecondary,
@@ -278,14 +295,14 @@ class Profilescreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             options[i].title,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'Lalezar',
                               fontSize: 18,
                               color: Constans.textPrimary,
                             ),
                           ),
                         ),
-                        Icon(
+                        const Icon(
                           Icons.chevron_right,
                           color: Constans.textSecondary,
                           size: 24,

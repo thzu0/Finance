@@ -1,5 +1,6 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/database/app_setting.dart';
 
 import 'package:finance/widget/build_home_page_container_widget.dart';
 
@@ -16,6 +17,40 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _s = AppSettings.instance;
+  late String _name = _s.get<String>('name', 'بدون نام');
+
+  @override
+  void initState() {
+    super.initState();
+    _s.changes.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    _s.changes.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _name = _s.get<String>('name', 'بدون نام');
+    });
+  }
+
+  /// سلام بر اساس ساعت ایران (UTC+3:30 بدون DST)
+  String _greeting() {
+    final now = DateTime.now().toUtc();
+    final iran = now.add(const Duration(hours: 3, minutes: 30));
+    final h = iran.hour;
+
+    if (h >= 5 && h < 12) return 'صبح بخیر';
+    if (h >= 12 && h < 17) return 'ظهر بخیر';
+    if (h >= 17 && h < 20) return 'عصر بخیر';
+    return 'شب بخیر';
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -28,9 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         actions: <Widget>[
-          ///====================================
-          ///
-          ///====================================
           Padding(
             padding: const EdgeInsets.only(left: 15),
             child: Row(
@@ -59,21 +91,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
                   Text(
-                    'صبح بخیر ,',
+                    '${_greeting()} ,',
                     textDirection: TextDirection.rtl,
                     textAlign: TextAlign.start,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Lalezar',
                       fontSize: 15,
-
                       color: Constans.textPrimary,
                     ),
                   ),
                   Text(
-                    'امیرطاها',
+                    _name,
                     textDirection: TextDirection.rtl,
-
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Lalezar',
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -82,8 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16, right: 15),
+              const Padding(
+                padding: EdgeInsets.only(left: 16, right: 15),
                 child: GlowAvatar(
                   imageProvider: AssetImage('assets/images/profile.jfif'),
                 ),
