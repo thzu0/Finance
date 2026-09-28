@@ -1,5 +1,7 @@
 import 'package:finance/Onboard/onboarding_page.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/seed_categories.dart';
+import 'package:finance/security/app_lock_gate.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +9,7 @@ import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppSettings.instance.load();
   await seedCategoriesIfEmpty();
   runApp(const MyApp());
 }
@@ -17,6 +20,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) =>
+          AppLockGate(child: child ?? const SizedBox()),
       debugShowCheckedModeBanner: false,
 
       // ← locale رو دیگه ست نمی‌کنیم (پیش‌فرض انگلیسی/سیستم می‌مونه)

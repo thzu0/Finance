@@ -176,6 +176,11 @@ class _BuildHomePageState extends State<BuildHomePage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        SizedBox(
+                          height: 26,
+                          child: Image.asset('assets/images/toman_white.png'),
+                        ),
+                        const SizedBox(width: 6),
                         Text(
                           _loading ? '...' : formatAmount(_balance.round()),
                           textDirection: TextDirection.rtl,
@@ -185,11 +190,6 @@ class _BuildHomePageState extends State<BuildHomePage> {
                             fontSize: 34,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        SizedBox(
-                          height: 26,
-                          child: Image.asset('assets/images/toman_white.png'),
                         ),
                       ],
                     ),

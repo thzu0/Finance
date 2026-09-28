@@ -1,6 +1,13 @@
 // ignore: file_names
-import 'package:finance/widget/glass_box_widget.dart';
+import 'package:finance/Screen/pages/pin_screen.dart';
+import 'package:finance/database/app_setting.dart';
 
+import 'package:finance/database/data_reset.dart';
+
+import 'package:finance/security/biometrics_service.dart';
+import 'package:finance/security/pin_service.dart';
+
+import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
 class Accountsecurityscreen extends StatefulWidget {
@@ -18,21 +25,46 @@ class Accountsecurityscreen extends StatefulWidget {
 }
 
 class _AccountsecurityscreenState extends State<Accountsecurityscreen> {
-  late String _name = widget.name;
-  late String _email = widget.email;
-  bool _appLock = false;
-  bool _biometric = false;
+  final _s = AppSettings.instance;
+
+  late String _name = _s.get<String>('name', widget.name);
+  late String _email = _s.get<String>('email', widget.email);
+  late bool _appLock = PinService.isEnabled;
+  late bool _biometric = BiometricService.isEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_biometric) {
+      BiometricService.isAvailable().then((ok) {
+        if (!ok && mounted) {
+          BiometricService.disable();
+          setState(() => _biometric = false);
+        }
+      });
+    }
+  }
+
+  Future<bool?> _push(PinMode mode, String title, {bool allowBio = false}) =>
+      Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              PinScreen(mode: mode, title: title, allowBiometric: allowBio),
+        ),
+      );
 
   Future<void> _editName() async {
     final v = await showGlassForm(
       context,
       title: 'ویرایش نام',
       fields: [GlassFormField(label: 'نام', initial: _name)],
-      validate: (v) => v[0].isEmpty ? 'نام نمی‌تونه خالی باشه' : null,
+      validate: (v) => v[0].trim().isEmpty ? 'نام نمی‌تونه خالی باشه' : null,
     );
     if (v == null || !mounted) return;
-    setState(() => _name = v[0]);
-    // TODO: ذخیره‌ی نام
+    final name = v[0].trim();
+    await _s.set('name', name);
+    if (mounted) setState(() => _name = name);
   }
 
   Future<void> _editEmail() async {
@@ -51,57 +83,102 @@ class _AccountsecurityscreenState extends State<Accountsecurityscreen> {
           : null,
     );
     if (v == null || !mounted) return;
-    setState(() => _email = v[0]);
-    // TODO: ذخیره‌ی ایمیل
+    final email = v[0].trim();
+    await _s.set('email', email);
+    if (mounted) setState(() => _email = email);
   }
 
-  Future<void> _changePassword() async {
-    final v = await showGlassForm(
-      context,
-      title: 'تغییر رمز عبور',
-      confirmText: 'تغییر بده',
-      fields: const [
-        GlassFormField(label: 'رمز فعلی', obscure: true),
-        GlassFormField(label: 'رمز جدید', obscure: true),
-        GlassFormField(label: 'تکرار رمز جدید', obscure: true),
-      ],
-      validate: (v) {
-        if (v.any((e) => e.isEmpty)) return 'همه‌ی فیلدها رو پر کن';
-        if (v[1].length < 6) return 'رمز جدید حداقل ۶ کاراکتر باشه';
-        if (v[1] != v[2]) return 'تکرار رمز با رمز جدید یکی نیست';
-        return null;
-      },
-    );
-    if (v == null || !mounted) return;
-    // TODO: تغییر واقعی رمز
-    showGlassSnack(context, 'رمز عبور تغییر کرد');
+  Future<void> _toggleLock(bool enable) async {
+    if (enable) {
+      final ok = await _push(PinMode.setup, 'تعیین رمز عددی');
+      if (ok == true && mounted) {
+        setState(() => _appLock = true);
+        showGlassSnack(context, 'قفل برنامه فعال شد');
+      }
+    } else {
+      final ok = await _push(PinMode.verify, 'رمز فعلی رو وارد کن');
+      if (ok != true || !mounted) return;
+      await PinService.disable();
+      await BiometricService.disable();
+      if (!mounted) return;
+      setState(() {
+        _appLock = false;
+        _biometric = false;
+      });
+      showGlassSnack(context, 'قفل برنامه غیرفعال شد');
+    }
   }
 
-  Future<void> _logout() async {
+  Future<void> _changePin() async {
+    final verified = await _push(PinMode.verify, 'رمز فعلی رو وارد کن');
+    if (verified != true || !mounted) return;
+    final ok = await _push(PinMode.setup, 'رمز جدید');
+    if (ok == true && mounted) showGlassSnack(context, 'رمز عددی عوض شد');
+  }
+
+  Future<void> _toggleBiometric(bool enable) async {
+    if (!_appLock) {
+      showGlassSnack(context, 'اول قفل عددی رو فعال کن');
+      return;
+    }
+    if (enable) {
+      await BiometricService.debugCapabilities(); // ← این خط اضافه شد
+      final available = await BiometricService.isAvailable();
+      if (!available) {
+        if (!mounted) return;
+        showGlassSnack(context, 'این دستگاه از اثر انگشت پشتیبانی نمی‌کنه');
+        return;
+      }
+      final enrolled = await BiometricService.availableTypes();
+      if (enrolled.isEmpty) {
+        if (!mounted) return;
+        showGlassSnack(
+          context,
+          'هیچ اثر انگشتی روی گوشی ثبت نشده؛ از تنظیمات گوشی ثبت کن',
+        );
+        return;
+      }
+      final ok = await BiometricService.authenticate(
+        reason: 'برای فعال‌سازی اثر انگشت هویتت رو تأیید کن',
+      );
+      if (!ok || !mounted) return;
+      await BiometricService.enable();
+      if (!mounted) return;
+      setState(() => _biometric = true);
+      showGlassSnack(context, 'ورود با اثر انگشت فعال شد');
+    } else {
+      await BiometricService.disable();
+      if (!mounted) return;
+      setState(() => _biometric = false);
+      showGlassSnack(context, 'ورود با اثر انگشت غیرفعال شد');
+    }
+  }
+
+  Future<void> _deleteAll() async {
+    if (_appLock) {
+      final verified = await _push(PinMode.verify, 'برای ادامه رمز رو وارد کن');
+      if (verified != true || !mounted) return;
+    }
     final ok = await showGlassConfirm(
       context,
-      title: 'خروج از حساب',
-      message: 'مطمئنی می‌خوای از حسابت خارج بشی؟',
-      confirmText: 'خروج',
-      danger: true,
-    );
-    if (!ok || !mounted) return;
-    // TODO: پاک کردن نشست و رفتن به صفحه‌ی ورود
-    showGlassSnack(context, 'از حساب خارج شدی');
-  }
-
-  Future<void> _deleteAccount() async {
-    final ok = await showGlassConfirm(
-      context,
-      title: 'حذف حساب',
+      title: 'حذف همه‌ی اطلاعات',
       message:
-          'با حذف حساب، همه‌ی اطلاعاتت پاک می‌شه و برنمی‌گرده. ادامه می‌دی؟',
-      confirmText: 'حذف حساب',
+          'همه‌ی تراکنش‌ها، بودجه‌ها و تنظیماتت پاک می‌شه و برنمی‌گرده. ادامه می‌دی؟',
+      confirmText: 'حذف همه',
       danger: true,
     );
     if (!ok || !mounted) return;
-    // TODO: حذف واقعی حساب
-    showGlassSnack(context, 'درخواست حذف حساب ثبت شد');
+
+    await clearAllData();
+    await _s.clearAll();
+    if (!mounted) return;
+    setState(() {
+      _name = widget.name;
+      _email = widget.email;
+      _appLock = false;
+      _biometric = false;
+    });
+    showGlassSnack(context, 'همه‌ی اطلاعات پاک شد');
   }
 
   @override
@@ -129,47 +206,40 @@ class _AccountsecurityscreenState extends State<Accountsecurityscreen> {
         const SectionLabel('امنیت'),
         GlassGroup(
           children: [
-            GlassTile(
-              icon: Icons.lock_outline,
-              title: 'تغییر رمز عبور',
-              onTap: _changePassword,
-            ),
             GlassSwitchTile(
               icon: Icons.pin_outlined,
               title: 'قفل برنامه',
-              subtitle: 'ورود با رمز عددی',
+              subtitle: 'ورود با رمز عددی ۴ رقمی',
               value: _appLock,
-              onChanged: (v) {
-                setState(() => _appLock = v);
-                // TODO: صفحه‌ی تعیین رمز عددی
-              },
+              onChanged: _toggleLock,
             ),
-            GlassSwitchTile(
-              icon: Icons.fingerprint,
-              title: 'ورود با اثر انگشت',
-              value: _biometric,
-              onChanged: (v) {
-                setState(() => _biometric = v);
-                // TODO: احراز هویت بیومتریک (مثلا با پکیج local_auth)
-              },
-            ),
+            if (_appLock) ...[
+              GlassSwitchTile(
+                icon: Icons.fingerprint,
+                title: 'ورود با اثر انگشت',
+                subtitle: _biometric
+                    ? 'فعال — می‌تونی با اثر انگشت هم وارد بشی'
+                    : 'برای ورود سریع‌تر فعالش کن',
+                value: _biometric,
+                onChanged: _toggleBiometric,
+              ),
+              GlassTile(
+                icon: Icons.lock_reset,
+                title: 'تغییر رمز عددی',
+                onTap: _changePin,
+              ),
+            ],
           ],
         ),
-        const SectionLabel('حساب'),
+        const SectionLabel('داده‌ها'),
         GlassGroup(
           children: [
             GlassTile(
-              icon: Icons.logout,
-              title: 'خروج از حساب',
-              color: kDanger,
-              onTap: _logout,
-            ),
-            GlassTile(
               icon: Icons.delete_outline,
-              title: 'حذف حساب',
+              title: 'حذف همه‌ی اطلاعات',
               subtitle: 'این کار قابل بازگشت نیست',
               color: kDanger,
-              onTap: _deleteAccount,
+              onTap: _deleteAll,
             ),
           ],
         ),
