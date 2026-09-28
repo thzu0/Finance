@@ -7,6 +7,30 @@ import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// ═════════════════════════════════════════════
+// تابع کمکی: تبدیل ارقام فارسی/عربی به انگلیسی
+// ═════════════════════════════════════════════
+String _normalizeDigits(String input) {
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+  final buffer = StringBuffer();
+  for (final rune in input.runes) {
+    final char = String.fromCharCode(rune);
+    final pi = persian.indexOf(char);
+    if (pi != -1) {
+      buffer.write(pi);
+      continue;
+    }
+    final ai = arabic.indexOf(char);
+    if (ai != -1) {
+      buffer.write(ai);
+      continue;
+    }
+    buffer.write(char);
+  }
+  return buffer.toString();
+}
+
 class CreditCardScreen extends StatefulWidget {
   const CreditCardScreen({super.key});
 
@@ -53,7 +77,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
 
   /// تشخیص خودکار بانک از روی شماره کارت
   void _onNumberChanged() {
-    // فقط توی حالت ذخیره‌نشده یا ویرایش
     if (_hasSaved && !_editing) return;
 
     final digits = _numberCtrl.text.replaceAll(RegExp(r'\D'), '');
@@ -116,7 +139,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       return;
     }
 
-    // چک بانک ناشناخته
     final detectedBank = BankBinDetector.detectBank(number);
     if (detectedBank == null) {
       showGlassSnack(
@@ -126,7 +148,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       return;
     }
 
-    // اجبار بانک تشخیص‌داده‌شده
     if (detectedBank != _selectedBank) {
       setState(() => _selectedBank = detectedBank);
     }
@@ -183,7 +204,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
 
   @override
   Widget build(BuildContext context) {
-    // فقط بانک‌های اصلی رو نشون بده
     final visibleBanks = BankTheme.banks
         .where((b) => BankBinDetector.supportedBanks.contains(b.name))
         .toList();
@@ -217,15 +237,14 @@ class _CreditCardScreenState extends State<CreditCardScreen>
               label: 'شماره کارت',
               hint: '6104 3377 1234 5678',
               icon: Icons.credit_card,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.visiblePassword,
               focused: _numberFocused,
               onFocus: (v) => setState(() => _numberFocused = v),
               textDirection: TextDirection.ltr,
               enabled: !_hasSaved || _editing,
               formatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(16),
                 _CardNumberFormatter(),
+                LengthLimitingTextInputFormatter(19),
               ],
             ),
             _GlassField(
@@ -243,15 +262,14 @@ class _CreditCardScreenState extends State<CreditCardScreen>
               label: 'تاریخ انقضا',
               hint: 'MM/YY',
               icon: Icons.calendar_today_outlined,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.visiblePassword,
               focused: _expiryFocused,
               onFocus: (v) => setState(() => _expiryFocused = v),
               textDirection: TextDirection.ltr,
               enabled: !_hasSaved || _editing,
               formatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(4),
                 _ExpiryFormatter(),
+                LengthLimitingTextInputFormatter(5),
               ],
             ),
           ],
@@ -307,7 +325,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
 }
 
 // ═════════════════════════════════════════════
-// پیش‌نمایش کارت (Card Preview)
+// پیش‌نمایش کارت
 // ═════════════════════════════════════════════
 class _CardPreview extends StatelessWidget {
   final String number;
@@ -607,7 +625,7 @@ class _GlassField extends StatelessWidget {
                     keyboardType: keyboardType,
                     inputFormatters: formatters,
                     textDirection: textDirection,
-                    enabled: enabled,
+                    readOnly: !enabled, // ← readOnly به‌جای enabled
                     textAlign: textDirection == TextDirection.ltr
                         ? TextAlign.left
                         : TextAlign.right,
@@ -648,7 +666,7 @@ class _GlassField extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════
-// انتخابگر بانک (چیپ‌های افقی)
+// انتخابگر بانک
 // ═════════════════════════════════════════════
 class _BankSelector extends StatelessWidget {
   final List<BankTheme> banks;
@@ -854,19 +872,24 @@ class _ActionButton extends StatelessWidget {
 // ═════════════════════════════════════════════
 // Input Formatters
 // ═════════════════════════════════════════════
+
+/// شماره کارت: فارسی→انگلیسی، فیلتر غیرعدد، گروه‌بندی ۴ رقمی
 class _CardNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final normalized = _normalizeDigits(newValue.text);
+    final digits = normalized.replaceAll(RegExp(r'\D'), '');
+
     final buffer = StringBuffer();
     for (int i = 0; i < digits.length; i++) {
       if (i > 0 && i % 4 == 0) buffer.write(' ');
       buffer.write(digits[i]);
     }
     final formatted = buffer.toString();
+
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -874,21 +897,25 @@ class _CardNumberFormatter extends TextInputFormatter {
   }
 }
 
+/// تاریخ انقضا: فارسی→انگلیسی، فیلتر غیرعدد، فرمت MM/YY
 class _ExpiryFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final normalized = _normalizeDigits(newValue.text);
+    final digits = normalized.replaceAll(RegExp(r'\D'), '');
+
     String formatted = '';
     if (digits.isNotEmpty) {
       formatted = digits.substring(0, digits.length >= 2 ? 2 : 1);
     }
     if (digits.length > 2) {
       formatted +=
-          '/' + digits.substring(2, digits.length > 4 ? 4 : digits.length);
+          '/${digits.substring(2, digits.length > 4 ? 4 : digits.length)}';
     }
+
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
