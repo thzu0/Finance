@@ -7,7 +7,6 @@ import 'package:finance/widget/build_home_page_container_widget.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:finance/widget/glowAvatar.dart';
-import 'package:finance/widget/icon_appbar_widget.dart';
 
 import 'package:flutter/material.dart';
 
@@ -56,64 +55,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'شب بخیر';
   }
 
-  Future<void> _createTestNotification() async {
-    final samples = [
-      {
-        'title': 'هشدار بودجه',
-        'body': 'بودجه‌ی خورد و خوراک به ۸۵٪ رسید. حواست باشه!',
-        'type': 'budget',
-      },
-      {
-        'title': 'تراکنش جدید',
-        'body': 'یه خرید ۲۵۰,۰۰۰ تومانی از بانک سامان ثبت شد.',
-        'type': 'sms',
-      },
-      {
-        'title': 'یادآوری',
-        'body': 'امروز تراکنش‌هات رو ثبت کردی؟ یادت نره!',
-        'type': 'daily',
-      },
-      {
-        'title': 'گزارش هفتگی',
-        'body':
-            'این هفته ۱,۲۵۰,۰۰۰ تومان خرج کردی. نسبت به هفته‌ی قبل ۱۵٪ کمتر.',
-        'type': 'weekly',
-      },
-      {
-        'title': 'پیشنهاد هوشمند',
-        'body':
-            'اگه اشتراک‌های استفاده‌نشده‌ت رو لغو کنی، ماهانه ۲۰۰,۰۰۰ تومان صرفه‌جویی می‌کنی.',
-        'type': 'tips',
-      },
-      {
-        'title': 'خلاصه‌ی ماهانه',
-        'body':
-            'ماه گذشته ۴,۸۰۰,۰۰۰ تومان درآمد و ۳,۲۰۰,۰۰۰ تومان هزینه داشتی.',
-        'type': 'monthly',
-      },
-    ];
-
-    final s = samples[DateTime.now().millisecondsSinceEpoch % samples.length];
-
-    await NotificationService.create(
-      title: s['title']!,
-      body: s['body']!,
-      type: s['type']!,
-    );
-
-    if (!mounted) return;
-    showGlassSnack(context, 'اعلان «${s['title']}» ساخته شد');
-  }
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: kAccent,
-        onPressed: _createTestNotification,
-        child: const Icon(Icons.add_alert, color: Colors.white),
-      ),
       backgroundColor: Constans.background,
       extendBodyBehindAppBar: true,
       extendBody: true,
@@ -124,13 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: <Widget>[
           Padding(
             padding: const EdgeInsets.only(left: 15),
-            child: Row(
-              children: [
-                _NotificationBell(),
-                const SizedBox(width: 8),
-                HeaderIconButton(icon: Icons.person_outline, onTap: () {}),
-              ],
-            ),
+            child: Row(children: [_NotificationBell()]),
           ),
           const Spacer(),
 

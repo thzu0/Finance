@@ -130,7 +130,7 @@ class GlassPage extends StatelessWidget {
         child: SafeArea(
           child: SingleChildScrollView(
             // ۸۰ = ارتفاع اپ‌بار، تا محتوا زیر تیتر نره
-            padding: const EdgeInsets.fromLTRB(16, 80, 16, 40),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
             child: Directionality(
               textDirection: TextDirection.rtl,
               child: Column(

@@ -1,5 +1,6 @@
 // ignore: file_names
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
 import 'package:finance/services/sms_permission.dart';
 import 'package:finance/widget/glass_box_widget.dart';
@@ -14,15 +15,14 @@ class Appsettingsscreen extends StatefulWidget {
 }
 
 class _AppsettingsscreenState extends State<Appsettingsscreen> {
-  int _currency = 0; // 0 = تومان ، 1 = ریال
-  int _calendar = 0; // 0 = شمسی ، 1 = میلادی
-  int _digits = 0; // 0 = فارسی ، 1 = انگلیسی
-  bool _hideAmounts = false;
-  bool _haptic = true;
+  final _s = AppSettings.instance;
+
+  late int _currency = _s.get<int>('currency', 0); // 0 = تومان ، 1 = ریال
+  late int _calendar = _s.get<int>('calendar', 0); // 0 = شمسی ، 1 = میلادی
+  late int _digits = _s.get<int>('digits', 0); // 0 = فارسی ، 1 = انگلیسی
+  late bool _hideAmounts = _s.get<bool>('hide_amounts', false);
+  late bool _haptic = _s.get<bool>('haptic', true);
   bool _smsEnabled = false;
-
-  // TODO: همه‌ی این تنظیم‌ها رو جایی ذخیره کن (مثلا shared_preferences)
-
   @override
   void initState() {
     super.initState();
@@ -76,20 +76,6 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
     }
   }
 
-  Future<void> _clearData() async {
-    final ok = await showGlassConfirm(
-      context,
-      title: 'پاک کردن همه‌ی داده‌ها',
-      message:
-          'همه‌ی تراکنش‌ها، بودجه‌ها و هدف‌هات حذف می‌شن و برنمی‌گردن. مطمئنی؟',
-      confirmText: 'پاک کن',
-      danger: true,
-    );
-    if (!ok || !mounted) return;
-    // TODO: پاک کردن واقعی داده‌ها
-    showGlassSnack(context, 'همه‌ی داده‌ها پاک شد');
-  }
-
   @override
   Widget build(BuildContext context) {
     return GlassPage(
@@ -103,21 +89,30 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               title: 'واحد پول',
               labels: const ['تومان', 'ریال'],
               selected: _currency,
-              onChanged: (i) => setState(() => _currency = i),
+              onChanged: (i) async {
+                setState(() => _currency = i);
+                await _s.set('currency', i);
+              },
             ),
             _SegmentSetting(
               icon: Icons.calendar_today_outlined,
               title: 'تقویم',
               labels: const ['شمسی', 'میلادی'],
               selected: _calendar,
-              onChanged: (i) => setState(() => _calendar = i),
+              onChanged: (i) async {
+                setState(() => _calendar = i);
+                await _s.set('calendar', i);
+              },
             ),
             _SegmentSetting(
               icon: Icons.pin_outlined,
               title: 'نوع ارقام',
               labels: const ['فارسی', 'English'],
               selected: _digits,
-              onChanged: (i) => setState(() => _digits = i),
+              onChanged: (i) async {
+                setState(() => _digits = i);
+                await _s.set('digits', i);
+              },
             ),
           ],
         ),
@@ -129,13 +124,19 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               title: 'مخفی کردن مبالغ',
               subtitle: 'مبلغ‌ها به‌جای عدد، ••• نشون داده می‌شن',
               value: _hideAmounts,
-              onChanged: (v) => setState(() => _hideAmounts = v),
+              onChanged: (v) async {
+                setState(() => _hideAmounts = v);
+                await _s.set('hide_amounts', v);
+              },
             ),
             GlassSwitchTile(
               icon: Icons.vibration,
               title: 'لرزش هنگام لمس',
               value: _haptic,
-              onChanged: (v) => setState(() => _haptic = v),
+              onChanged: (v) async {
+                setState(() => _haptic = v);
+                await _s.set('haptic', v);
+              },
             ),
           ],
         ),
@@ -161,23 +162,17 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
           ],
         ),
         const SectionLabel('داده‌ها'),
+
         GlassGroup(
           children: [
             GlassTile(
-              icon: Icons.cloud_upload_outlined,
-              title: 'پشتیبان‌گیری',
-              subtitle: 'ذخیره‌ی نسخه‌ی پشتیبان از اطلاعات',
+              icon: Icons.picture_as_pdf_outlined,
+              title: 'خروجی گزارش (PDF)',
+              subtitle: 'گردش مالی‌ت رو به‌صورت فایل PDF بگیر',
               onTap: () {
-                // TODO: پشتیبان‌گیری
+                // TODO: ساخت PDF
                 showGlassSnack(context, 'این قابلیت به‌زودی اضافه می‌شه');
               },
-            ),
-            GlassTile(
-              icon: Icons.delete_sweep_outlined,
-              title: 'پاک کردن همه‌ی داده‌ها',
-              subtitle: 'این کار قابل بازگشت نیست',
-              color: kDanger,
-              onTap: _clearData,
             ),
           ],
         ),

@@ -99,6 +99,51 @@ class _NotificationsHistoryScreenState
     return '${dt.year}/${dt.month}/${dt.day}';
   }
 
+  Future<void> _addDummy() async {
+    final now = DateTime.now();
+    final samples = [
+      ('daily', 'یادآوری ثبت تراکنش‌ها', 'امروز خرج‌هات رو ثبت کردی؟', now),
+      (
+        'budget',
+        'هشدار بودجه',
+        'به ۸۰٪ سقف دسته‌ی خوراک رسیدی',
+        now.subtract(const Duration(hours: 3)),
+      ),
+      (
+        'weekly',
+        'گزارش هفتگی',
+        'این هفته ۱٬۲۰۰٬۰۰۰ تومان خرج کردی',
+        now.subtract(const Duration(days: 1)),
+      ),
+      (
+        'tips',
+        'پیشنهاد هوشمند',
+        'با کم کردن قهوه‌ی بیرون ماهی ۲۰۰ هزار صرفه‌جویی کن',
+        now.subtract(const Duration(days: 3)),
+      ),
+      (
+        'sms',
+        'تراکنش جدید از پیامک',
+        'برداشت ۳۵۰٬۰۰۰ تومان',
+        now.subtract(const Duration(minutes: 20)),
+      ),
+    ];
+
+    for (final s in samples) {
+      await database
+          .into(database.notifications)
+          .insert(
+            NotificationsCompanion(
+              type: Value(s.$1),
+              title: Value(s.$2),
+              body: Value(s.$3),
+              createdAt: Value(s.$4),
+            ),
+          );
+    }
+    notificationsTicker.value++; // لیست خودش رفرش میشه
+  }
+
   Future<void> _clearAll() async {
     final ok = await showGlassConfirm(
       context,
@@ -128,6 +173,16 @@ class _NotificationsHistoryScreenState
     return GlassPage(
       title: 'اعلان‌ها',
       children: [
+        // TODO: بعد از تست پاک کن
+        GlassGroup(
+          children: [
+            GlassTile(
+              icon: Icons.bug_report_outlined,
+              title: 'تست: افزودن اعلان نمونه',
+              onTap: _addDummy,
+            ),
+          ],
+        ),
         // ─── حالت لودینگ ───
         if (_loading)
           const Padding(

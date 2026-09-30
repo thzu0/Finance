@@ -71,20 +71,8 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
     return GlassPage(
       title: 'اعلان‌ها',
       children: [
-        const SizedBox(height: 4),
-
-        // ─── دکمه‌ی مشاهده‌ی تاریخچه ───
-        GlassGroup(
-          children: [
-            GlassTile(
-              icon: Icons.history,
-              title: 'تاریخچه‌ی اعلان‌ها',
-              subtitle: 'همه‌ی اعلان‌های قبلی رو ببین',
-              onTap: _openHistory,
-            ),
-          ],
-        ),
-
+        const SizedBox(height: 2),
+        const SectionLabel('مدیریت'),
         GlassGroup(
           children: [
             GlassSwitchTile(
@@ -96,6 +84,12 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                 setState(() => _enabled = v);
                 await _s.set('notif_enabled', v);
               },
+            ),
+            GlassTile(
+              icon: Icons.history,
+              title: 'تاریخچه‌ی اعلان‌ها',
+              subtitle: 'همه‌ی اعلان‌های قبلی رو ببین',
+              onTap: _openHistory,
             ),
           ],
         ),
