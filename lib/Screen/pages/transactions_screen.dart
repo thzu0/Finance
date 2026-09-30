@@ -7,6 +7,7 @@ import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/widget/currency_mark.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
@@ -568,13 +569,10 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                         ),
                       ),
                       SizedBox(width: 5),
-                      Image.asset(
-                        isIncome
-                            ? 'assets/images/toman_green.png'
-                            : 'assets/images/toman_red.png',
+                      CurrencyMark(
+                        color: isIncome ? 'green' : 'red',
                         width: 25,
-                        height: 20,
-                        filterQuality: FilterQuality.high,
+                        height: 26,
                       ),
                     ],
                   ),

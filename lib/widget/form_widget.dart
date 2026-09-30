@@ -69,6 +69,24 @@ int fromInputAmount(int typed) => isRial ? typed ~/ 10 : typed;
 String showAmount(int n) =>
     amountsHidden ? '•••' : formatAmount(toDisplayAmount(n));
 
+/// برای وسط دونات: (عدد کوتاه‌شده، واحد) مثلاً ('۳٫۲', 'میلیون تومان')
+(String, String) centerAmountParts(int toman) {
+  if (amountsHidden) return ('•••', '');
+  final v = toDisplayAmount(toman);
+  if (v >= 1000000) {
+    final m = v / 1000000;
+    final s = (m - m.roundToDouble()).abs() < 0.05
+        ? m.round().toString()
+        : m.toStringAsFixed(1).replaceAll('.', '٫');
+    return (toPersianDigits(s), 'میلیون $currencyName');
+  }
+  final k = v / 1000;
+  final s = (k - k.roundToDouble()).abs() < 0.05
+      ? k.round().toString()
+      : k.toStringAsFixed(1).replaceAll('.', '٫');
+  return (toPersianDigits(s), 'هزار $currencyName');
+}
+
 /// موقع تایپ، عدد رو فارسی و سه‌رقم‌سه‌رقم جدا می‌کنه
 class ThousandsFormatter extends TextInputFormatter {
   @override

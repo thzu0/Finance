@@ -2,21 +2,18 @@ import 'dart:math' as math;
 
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/database/app_setting.dart';
+import 'package:finance/database/database_provider.dart';
+import 'package:finance/database/insights_repository.dart' as repo;
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/widget/currency_mark.dart';
+import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
 
-// ← اضافه شد: برای گوش دادن به تغییرات دیتابیس (transactionsTicker)
-import 'package:finance/database/database_provider.dart';
-// ← اضافه شد: توابع واقعی خوندن insights از دیتابیس؛ با as repo
-// چون اسم کلاسش (InsightsResult) با چیزی توی این فایل قاطی نشه
-import 'package:finance/database/insights_repository.dart' as repo;
-
 enum _Period { week, month, year }
 
-// این کلاس بدون تغییر می‌مونه — فقط دیگه از داده‌ی ثابت پر نمیشه،
-// از نتیجه‌ی دیتابیس (repo.InsightsResult) پر میشه.
 class _PeriodData {
   final String tabLabel;
   final String compareLabel;
@@ -38,16 +35,13 @@ class _PeriodData {
 
   int get total => values.fold(0, (a, b) => a + b);
 
-  // ← تغییر کرد: قبلاً مستقیم تقسیم می‌کرد؛ الان اگه previousTotal صفر
-  // باشه (مثلاً هنوز داده‌ی دوره‌ی قبل نداریم)، صفر برمی‌گردونه
-  // به‌جای خطای تقسیم بر صفر / NaN.
   double get change =>
       previousTotal == 0 ? 0 : (total - previousTotal) / previousTotal;
 
   int get changePercent => (change.abs() * 100).round();
+
   int get peakIndex {
-    if (values.isEmpty)
-      return 0; // ← اضافه شد: جلوگیری از خطا وقتی هیچ داده‌ای نیست
+    if (values.isEmpty) return 0;
     var best = 0;
     for (var i = 1; i < values.length; i++) {
       if (values[i] > values[best]) best = i;
@@ -56,11 +50,7 @@ class _PeriodData {
   }
 }
 
-// ← حذف شد: کل Map ثابت «_data» که داده‌ی نمونه‌ی هاردکد شده داشت
-// (هفته/ماه/سال با اعداد فیک) — دیگه لازم نیست چون از دیتابیس می‌خونیم.
-
-// ← اضافه شد: فقط برچسب‌های ثابت (روزها، ماه‌ها، عنوان تب) که به
-// دیتابیس ربطی ندارن و همیشه یکی‌ان، نگه داشته شدن، جدا از مقادیر واقعی.
+// برچسب‌های ثابت: (برچسب کوتاه، برچسب کامل، عنوان تب، عنوان مقایسه)
 const Map<_Period, (List<String>, List<String>, String, String)> _labels = {
   _Period.week: (
     ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'],
@@ -125,35 +115,32 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
   static const double _barAreaHeight = 130;
 
+  final _s = AppSettings.instance;
+
   _Period _period = _Period.week;
 
-  // ← اضافه شد: وضعیت لودینگ، و نتیجه‌ی فعلی که از دیتابیس خونده شده
   bool _loading = true;
   _PeriodData? _current;
 
-  // ← اضافه شد: initState — قبلاً این صفحه StatelessWidget-مانند بود
-  // (همه‌چی از Map ثابت می‌اومد)، الان باید موقع باز شدن صفحه از
-  // دیتابیس بخونیم.
+  void _onSettings() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
-    // هر وقت تراکنشی جایی توی اپ اضافه/حذف بشه، این صفحه خودکار
-    // دوباره از دیتابیس می‌خونه (همون ticker که برای Transactions
-    // و Budgets هم استفاده کردیم).
     transactionsTicker.addListener(_load);
+    _s.changes.addListener(_onSettings);
   }
 
-  // ← اضافه شد: باید listener رو موقع از بین رفتن صفحه پاک کنیم
-  // وگرنه memory leak میشه.
   @override
   void dispose() {
     transactionsTicker.removeListener(_load);
+    _s.changes.removeListener(_onSettings);
     super.dispose();
   }
 
-  // ← اضافه شد: تابع اصلی خوندن داده — بسته به تب فعلی (هفته/ماه/سال)
-  // تابع مناسب رو از insights_repository.dart صدا می‌زنه.
   Future<void> _load() async {
     setState(() => _loading = true);
 
@@ -171,8 +158,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
     if (mounted) {
       setState(() {
-        // نتیجه‌ی خام دیتابیس (repo.InsightsResult) رو به همون شکل
-        // _PeriodData قبلی تبدیل می‌کنیم، تا بقیه‌ی UI دست‌نخورده بمونه.
         _current = _PeriodData(
           tabLabel: tabLabel,
           compareLabel: compareLabel,
@@ -189,32 +174,26 @@ class _InsightsscreenState extends State<Insightsscreen> {
     }
   }
 
-  String _fmt(int n) {
-    final s = n.toString();
-    final b = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-      b.write(s[i]);
-    }
-    return b.toString();
-  }
-
-  /// ۹۰۰ هزار / ۱٫۵ میلیون
+  /// ۹۰۰ هزار / ۱٫۵ میلیون (با رعایت ریال و مخفی‌سازی)
   String _compact(int v) {
-    if (v >= 1000000) {
-      final m = v / 1000000;
+    if (amountsHidden) return '•••';
+    final x = toDisplayAmount(v);
+    if (x >= 1000000) {
+      final m = x / 1000000;
       final s = m == m.roundToDouble()
           ? m.round().toString()
           : m.toStringAsFixed(1).replaceAll('.', '٫');
       return '${s.farsiNumber} میلیون';
     }
-    return '${(v ~/ 1000).toString().farsiNumber} هزار';
+    return '${(x ~/ 1000).toString().farsiNumber} هزار';
   }
+
+  /// همون _compact ولی با واحد؛ موقع مخفی‌سازی فقط •••
+  String _compactWithUnit(int v) =>
+      amountsHidden ? '•••' : '${_compact(v)} $currencyName';
 
   @override
   Widget build(BuildContext context) {
-    // ← تغییر کرد: قبلاً `_data[_period]!` مستقیم از Map ثابت می‌اومد؛
-    // الان از فیلد _current (که async پر شده) میاد.
     final d = _current;
 
     return Scaffold(
@@ -248,8 +227,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
       ),
       body: AppGlowBackground(
         child: SafeArea(
-          // ← اضافه شد: تا وقتی _loading=true یا هنوز چیزی از دیتابیس
-          // نیومده (d == null)، به‌جای محتوای صفحه، اسپینر نشون بده.
           child: _loading || d == null
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
@@ -263,9 +240,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
                         _sectionHeader('خرج ${d.tabLabel}'),
                         _card(_buildBarChart(d)),
                         _sectionHeader('دسته‌های پرخرج'),
-                        // ← اضافه شد: اگه توی این بازه هیچ خرجی ثبت
-                        // نشده (لیست دسته‌ها خالیه)، به‌جای دونات خالی/
-                        // خراب، یه پیام ساده نشون بده.
                         d.categories.isEmpty
                             ? _card(
                                 Text(
@@ -333,9 +307,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
               return Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  // ← تغییر کرد: قبلاً فقط setState می‌کرد؛ الان بعدش
-                  // _load() رو هم صدا می‌زنه تا دیتای تب جدید از
-                  // دیتابیس خونده بشه.
                   onTap: () {
                     setState(() => _period = p);
                     _load();
@@ -351,8 +322,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
                           : null,
                     ),
                     child: Text(
-                      // ← تغییر کرد: قبلاً از _data[p]!.tabLabel می‌اومد؛
-                      // الان از همون Map ثابت برچسب‌ها (_labels) میاد.
                       _labels[p]!.$3,
                       style: TextStyle(
                         fontFamily: 'Lalezar',
@@ -369,10 +338,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
       ),
     );
   }
-
-  // از این پایین به بعد، همه‌ی متدها دقیقاً همونی هستن که داشتی —
-  // چیزی توشون عوض نشده، چون همه‌شون از روی _PeriodData d کار
-  // می‌کنن و ساختار اون کلاس تغییر نکرده.
 
   Widget _buildSummary(_PeriodData d) {
     final down = d.change <= 0;
@@ -423,7 +388,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _fmt(d.total).farsiNumber,
+                    showAmount(d.total),
                     textDirection: TextDirection.ltr,
                     style: TextStyle(
                       fontFamily: 'Lalezar',
@@ -432,15 +397,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
                     ),
                   ),
                   const SizedBox(width: 7),
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/toman_white.png',
-                        width: 25,
-                        height: 30,
-                      ),
-                    ],
-                  ),
+                  CurrencyMark(color: 'white', height: 28),
                 ],
               ),
             ],
@@ -452,8 +409,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
   Widget _buildBarChart(_PeriodData d) {
     if (d.values.isEmpty || d.values.every((v) => v == 0)) {
-      // ← اضافه شد: اگه هیچ خرجی توی این بازه نبوده، به‌جای کرش
-      // (تقسیم بر maxV=0)، یه پیام ساده نشون بده.
       return Text(
         'داده‌ای برای نمایش نیست',
         style: TextStyle(
@@ -472,7 +427,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'بیشترین: ${d.fullLabels[peak]} · ${_compact(d.values[peak])} تومان',
+          'بیشترین: ${d.fullLabels[peak]} · ${_compactWithUnit(d.values[peak])}',
           style: TextStyle(
             fontFamily: 'Lalezar',
             fontSize: 15,
@@ -546,25 +501,8 @@ class _InsightsscreenState extends State<Insightsscreen> {
     );
   }
 
-  /// عدد ۷ رقمی به بالا → میلیون تومان، پایین‌تر → هزار تومان
-  (String, String) _centerDisplay(int total) {
-    if (total >= 1000000) {
-      final m = total / 1000000;
-      final s = (m - m.roundToDouble()).abs() < 0.05
-          ? m.round().toString()
-          : m.toStringAsFixed(1).replaceAll('.', '٫');
-      return (s.farsiNumber, 'میلیون تومان');
-    }
-
-    final k = total / 1000;
-    final s = (k - k.roundToDouble()).abs() < 0.05
-        ? k.round().toString()
-        : k.toStringAsFixed(1).replaceAll('.', '٫');
-    return (s.farsiNumber, 'هزار تومان');
-  }
-
   Widget _buildCategories(_PeriodData d) {
-    final (amountText, unitLabel) = _centerDisplay(d.total); // ← اضافه ش
+    final (amountText, unitLabel) = centerAmountParts(d.total);
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -575,7 +513,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
           const SizedBox(width: 24),
           SpendingDonutChart(
             categories: d.categories,
-            centerValue: amountText, // ← تغییر کرد
+            centerValue: amountText,
             centerUnit: unitLabel,
             size: 160,
           ),
@@ -586,9 +524,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
   Widget _buildSuggestion(_PeriodData d) {
     if (d.values.isEmpty || d.values.every((v) => v == 0)) {
-      // ← اضافه شد: پیشنهاد هوشمند هم برای حالت بدون داده باید
-      // متن جایگزین داشته باشه، وگرنه به fullLabels[peak] روی
-      // داده‌ی خالی رفرنس می‌ده.
       return Text(
         'هنوز چیزی برای تحلیل نداریم — چند تا خرج ثبت کن تا اینجا پیشنهاد بدم.',
         style: TextStyle(
@@ -603,7 +538,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
     final peak = d.peakIndex;
     final text =
         'بیشترین خرجت ${d.fullLabels[peak]} بوده '
-        '(${_compact(d.values[peak])} تومان). '
+        '(${_compactWithUnit(d.values[peak])}). '
         'دفعه‌ی بعد قبل از خرج‌های بزرگ، ۲۴ ساعت صبر کن؛ '
         'خیلی وقت‌ها دیگه لازم نمی‌شه.';
 

@@ -86,7 +86,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _save() async {
-    final amount = parseAmount(_amountCtrl.text);
+    final amount = fromInputAmount(parseAmount(_amountCtrl.text));
     if (amount <= 0) {
       showGlassSnack(context, 'مبلغ رو وارد کن');
       return;

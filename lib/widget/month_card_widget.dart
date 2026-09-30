@@ -1,4 +1,5 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/widget/currency_mark.dart';
 import 'package:flutter/material.dart';
 
 class MonthOverviewCard extends StatelessWidget {
@@ -62,12 +63,7 @@ class MonthOverviewCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
 
               children: [
-                Image.asset(
-                  'assets/images/toman_white.png',
-                  width: 20,
-                  height: 25,
-                  filterQuality: FilterQuality.high,
-                ),
+                CurrencyMark(color: 'white', height: 30),
                 SizedBox(width: 4),
                 Text(
                   amount,

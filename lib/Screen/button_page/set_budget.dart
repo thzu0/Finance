@@ -24,6 +24,9 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   static const int _sliderMax = 20000000;
   static const int _sliderStep = 100000;
 
+  // سقف اسلایدر به واحد نمایش (تومان یا ریال)
+  int get _maxDisplay => toDisplayAmount(_sliderMax);
+
   int _mode = 0;
   final TextEditingController _amountCtrl = TextEditingController();
 
@@ -50,7 +53,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     final existing = widget.existingBudget;
     if (existing != null) {
       _mode = existing.period == 'monthly' ? 0 : 1;
-      _amountCtrl.text = formatAmount(existing.amount.round());
+      _amountCtrl.text = formatAmount(toDisplayAmount(existing.amount.round()));
       _start = existing.startDate;
       _end =
           existing.endDate ?? existing.startDate.add(const Duration(days: 30));
@@ -131,7 +134,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   }
 
   Future<void> _save() async {
-    final amount = parseAmount(_amountCtrl.text);
+    final amount = fromInputAmount(parseAmount(_amountCtrl.text));
     final category = _selectedCategory;
 
     if (category == null) {
@@ -291,7 +294,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     final cat = _selectedCategory;
     final sliderValue = parseAmount(
       _amountCtrl.text,
-    ).clamp(0, _sliderMax).toDouble();
+    ).clamp(0, _maxDisplay).toDouble();
 
     return GlassPage(
       // ← تغییر کرد: تیتر بسته به حالت افزودن/ویرایش فرق می‌کنه
@@ -338,7 +341,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
                 child: Slider(
                   value: sliderValue,
                   min: 0,
-                  max: _sliderMax.toDouble(),
+                  max: _maxDisplay.toDouble(),
                   divisions: _sliderMax ~/ _sliderStep,
                   onChanged: (v) => _setAmount(v.round()),
                 ),
@@ -353,7 +356,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
                       style: glassText(13, color: Constans.textSecondary),
                     ),
                     Text(
-                      formatAmount(_sliderMax),
+                      formatAmount(_maxDisplay),
                       style: glassText(13, color: Constans.textSecondary),
                     ),
                   ],

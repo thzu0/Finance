@@ -11,6 +11,7 @@ import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/build_action_button_widget.dart';
+import 'package:finance/widget/currency_mark.dart';
 import 'package:finance/widget/fl_chart.dart';
 import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/month_card_widget.dart';
@@ -201,8 +202,8 @@ class _BuildHomePageState extends State<BuildHomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          height: 26,
-                          child: Image.asset('assets/images/toman_white.png'),
+                          height: 36,
+                          child: CurrencyMark(color: 'white', height: 45),
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -451,12 +452,12 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         )
                       : Builder(
                           builder: (_) {
-                            final parts = formatShortAmountParts(_expense);
+                            final (value, unit) = centerAmountParts(
+                              _expense.round(),
+                            );
                             return SpendingOverview(
-                              centerValue: _loading
-                                  ? '...'
-                                  : (_hide ? '•••' : parts.value),
-                              centerUnit: (_loading || _hide) ? '' : parts.unit,
+                              centerValue: _loading ? '...' : value,
+                              centerUnit: _loading ? '' : unit,
                               categories: _spendingCategories,
                             );
                           },
