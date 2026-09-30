@@ -1,4 +1,5 @@
 import 'package:finance/Constans/constans.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
@@ -44,6 +45,12 @@ String formatAmount(int n) {
   }
   return toPersianDigits(b.toString());
 }
+
+/// آیا مخفی کردن مبالغ روشنه؟
+bool get amountsHidden => AppSettings.instance.get<bool>('hide_amounts', false);
+
+/// برای نمایش مبلغ توی UI (نه فیلد ورودی): اگه مخفی‌سازی روشن بود ••• برمی‌گردونه
+String showAmount(int n) => amountsHidden ? '•••' : formatAmount(n);
 
 /// موقع تایپ، عدد رو فارسی و سه‌رقم‌سه‌رقم جدا می‌کنه
 class ThousandsFormatter extends TextInputFormatter {

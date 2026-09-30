@@ -6,6 +6,7 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/extention.dart';
 import 'package:finance/Screen/button_page/add_transaction.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
@@ -37,6 +38,18 @@ class _BuildHomePageState extends State<BuildHomePage> {
   int _incomePercent = 0, _expensePercent = 0, _savingsPercent = 0;
   bool _incomeUp = true, _expenseUp = false, _savingsUp = true;
 
+  final _s = AppSettings.instance;
+  late bool _hide = _s.get<bool>('hide_amounts', false);
+
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    setState(() => _hide = _s.get<bool>('hide_amounts', false));
+  }
+
+  Future<void> _toggleHide() async {
+    await _s.set('hide_amounts', !_hide);
+  }
+
   bool _loading = true;
 
   @override
@@ -44,11 +57,13 @@ class _BuildHomePageState extends State<BuildHomePage> {
     super.initState();
     _loadAll();
     transactionsTicker.addListener(_loadAll);
+    _s.changes.addListener(_onSettingsChanged);
   }
 
   @override
   void dispose() {
     transactionsTicker.removeListener(_loadAll);
+    _s.changes.removeListener(_onSettingsChanged);
     super.dispose();
   }
 
@@ -148,10 +163,19 @@ class _BuildHomePageState extends State<BuildHomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Icon(
-                        Icons.remove_red_eye_outlined,
-                        color: Colors.white,
-                        size: 18,
+                      GestureDetector(
+                        onTap: _toggleHide,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            _hide
+                                ? Icons.visibility_off_outlined
+                                : Icons.remove_red_eye_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -182,7 +206,11 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _loading ? '...' : formatAmount(_balance.round()),
+                          _loading
+                              ? '...'
+                              : (_hide
+                                    ? '•••'
+                                    : formatAmount(_balance.round())),
                           textDirection: TextDirection.rtl,
                           style: TextStyle(
                             fontFamily: 'Vazirmatn',
@@ -338,7 +366,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.trending_up,
                           label: 'درآمد',
-                          amount: formatAmount(_income.round()),
+                          amount: showAmount(_income.round()),
                           percent: '%${_incomePercent.abs()}'.farsiNumber,
                           isPositive: _incomeUp,
                           accentColor: Constans.success,
@@ -349,7 +377,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.trending_down,
                           label: 'هزینه',
-                          amount: formatAmount(_expense.round()),
+                          amount: showAmount(_expense.round()),
                           percent: '%${_expensePercent.abs()}'.farsiNumber,
                           isPositive: _expenseUp,
                           accentColor: Constans.expense,
@@ -360,7 +388,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         child: MonthOverviewCard(
                           icon: Icons.savings_outlined,
                           label: 'پس‌انداز',
-                          amount: formatAmount(_savings.round()),
+                          amount: showAmount(_savings.round()),
                           percent: '%${_savingsPercent.abs()}'.farsiNumber,
                           isPositive: _savingsUp,
                           accentColor: Constans.electricBlue,
@@ -425,8 +453,10 @@ class _BuildHomePageState extends State<BuildHomePage> {
                           builder: (_) {
                             final parts = formatShortAmountParts(_expense);
                             return SpendingOverview(
-                              centerValue: _loading ? '...' : parts.value,
-                              centerUnit: _loading ? '' : parts.unit,
+                              centerValue: _loading
+                                  ? '...'
+                                  : (_hide ? '•••' : parts.value),
+                              centerUnit: (_loading || _hide) ? '' : parts.unit,
                               categories: _spendingCategories,
                             );
                           },
