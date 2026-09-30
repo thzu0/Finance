@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
@@ -47,6 +48,12 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   static const Color _income = Color(0xFF2ED8A3);
   static const Color _expense = Color(0xFFFF5470);
 
+  final _s = AppSettings.instance;
+
+  void _onSettings() {
+    if (mounted) setState(() {});
+  }
+
   // 0 = همه ، 1 = درآمد ، 2 = هزینه
   int _selectedTab = 0;
 
@@ -60,11 +67,13 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     // هر وقت تراکنشی جای دیگه‌ای از اپ اضافه/حذف بشه، این صفحه
     // خودکار دوباره از دیتابیس می‌خونه.
     transactionsTicker.addListener(_loadTransactions);
+    _s.changes.addListener(_onSettings);
   }
 
   @override
   void dispose() {
     transactionsTicker.removeListener(_loadTransactions);
+    _s.changes.removeListener(_onSettings);
     super.dispose();
   }
 
@@ -548,7 +557,9 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _fmt(t.amount).farsiNumber,
+                        _s.get<bool>('hide_amounts', false)
+                            ? '•••'
+                            : _fmt(t.amount).farsiNumber,
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                           fontFamily: 'Lalezar',
