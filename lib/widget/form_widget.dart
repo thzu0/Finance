@@ -49,8 +49,25 @@ String formatAmount(int n) {
 /// آیا مخفی کردن مبالغ روشنه؟
 bool get amountsHidden => AppSettings.instance.get<bool>('hide_amounts', false);
 
-/// برای نمایش مبلغ توی UI (نه فیلد ورودی): اگه مخفی‌سازی روشن بود ••• برمی‌گردونه
-String showAmount(int n) => amountsHidden ? '•••' : formatAmount(n);
+// ─── واحد پول ───
+// توی دیتابیس همیشه «تومان» ذخیره میشه. فقط موقع نمایش ×۱۰ میشه.
+
+/// آیا کاربر ریال رو انتخاب کرده؟
+bool get isRial => AppSettings.instance.get<int>('currency', 0) == 1;
+
+/// اسم واحد برای نمایش توی متن‌ها
+String get currencyName => isRial ? 'ریال' : 'تومان';
+
+/// مبلغ ذخیره‌شده (تومان) → مبلغ قابل نمایش
+int toDisplayAmount(int toman) => isRial ? toman * 10 : toman;
+
+/// مبلغی که کاربر تایپ کرده (به واحد انتخابی) → تومان برای ذخیره
+int fromInputAmount(int typed) => isRial ? typed ~/ 10 : typed;
+
+/// برای نمایش مبلغ توی UI (نه فیلد ورودی):
+/// مخفی‌سازی رو چک می‌کنه، بعد واحد پول رو اعمال می‌کنه
+String showAmount(int n) =>
+    amountsHidden ? '•••' : formatAmount(toDisplayAmount(n));
 
 /// موقع تایپ، عدد رو فارسی و سه‌رقم‌سه‌رقم جدا می‌کنه
 class ThousandsFormatter extends TextInputFormatter {
