@@ -3,6 +3,7 @@ import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
 import 'package:finance/database/app_database.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/budget_repository.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/extentions/extentions.dart';
@@ -53,6 +54,12 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   // مشکل «۳ مهر زیر شهریور نشون داده میشه» از ریشه حل میشه.
   Jalali _selectedMonth = Jalali.now();
 
+  final _s = AppSettings.instance;
+
+  void _onSettings() {
+    if (mounted) setState(() {});
+  }
+
   List<_Budget> _budgets = [];
   bool _loading = true;
 
@@ -65,12 +72,14 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     // از روی تراکنش‌ها محاسبه میشه، باید هر دو رو گوش بدیم.
     budgetsTicker.addListener(_load);
     transactionsTicker.addListener(_load);
+    _s.changes.addListener(_onSettings);
   }
 
   @override
   void dispose() {
     budgetsTicker.removeListener(_load);
     transactionsTicker.removeListener(_load);
+    _s.changes.removeListener(_onSettings);
     super.dispose();
   }
 
@@ -118,7 +127,8 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     return b.toString();
   }
 
-  String _num(int n) => _fmt(n).farsiNumber;
+  String _num(int n) =>
+      _s.get<bool>('hide_amounts', false) ? '•••' : _fmt(n).farsiNumber;
 
   // ← تغییر کرد: قبلاً روی DateTime میلادی کار می‌کرد (کامنت قدیمی
   // زیر همین متد بود که پاک نکردیم چون گفتی دست نزنم، ولی منطق
