@@ -96,8 +96,8 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
             ),
             _SegmentSetting(
               icon: Icons.calendar_today_outlined,
-              title: 'تقویم',
-              labels: const ['شمسی', 'میلادی'],
+              title: 'زبان',
+              labels: const ['فارسی','English'],
               selected: _calendar,
               onChanged: (i) async {
                 setState(() => _calendar = i);
