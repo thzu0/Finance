@@ -1,4 +1,5 @@
-// ignore: file_names
+// todos delete this page and make it in app setting and make it better for the language and make it data base for it 
+// todos make for english and farsi for number for all of the currency and price
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
