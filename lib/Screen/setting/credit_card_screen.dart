@@ -4,6 +4,8 @@ import 'package:finance/database/bank_bin_detector.dart';
 import 'package:finance/database/bank_theme.dart';
 import 'package:finance/database/card_service.dart';
 import 'package:finance/services/sms_permission.dart';
+import 'package:finance/services/sms_sync_service.dart';
+import 'package:finance/sms/bank_sms_parser.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -289,6 +291,11 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       showGlassSnack(context, 'اول کارتت رو ذخیره کن');
       return;
     }
+    final bankName = _cardService.getCard()['bankName'] ?? '';
+    if (!SmsParserRegistry.isSupported(bankName)) {
+      showGlassSnack(context, 'خواندن پیامک این بانک هنوز پشتیبانی نمی‌شه');
+      return;
+    }
 
     final result = await SmsPermissionService.request();
     if (!mounted) return;
@@ -296,7 +303,13 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     switch (result) {
       case SmsPermissionResult.granted:
         setState(() => _smsEnabled = true);
-        showGlassSnack(context, 'خواندن خودکار پیامک فعال شد');
+        final n = await SmsSyncService.sync();
+        if (!mounted) return;
+        showGlassSnack(
+          context,
+          n > 0 ? '$n تراکنش جدید ثبت شد' : 'خواندن خودکار پیامک فعال شد',
+        );
+
         break;
       case SmsPermissionResult.denied:
         setState(() => _smsEnabled = false);
