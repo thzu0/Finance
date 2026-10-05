@@ -5,7 +5,7 @@ import 'package:finance/database/app_database.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/glass_box_widget.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -114,52 +114,6 @@ class _NotificationsHistoryScreenState
     if (diff.inHours < 24) return '${diff.inHours} ساعت پیش';
     if (diff.inDays < 7) return '${diff.inDays} روز پیش';
     return '${dt.year}/${dt.month}/${dt.day}';
-  }
-
-  // ─── تست (فقط توی دیباگ نشون داده می‌شه) ───
-  Future<void> _addDummy() async {
-    final now = DateTime.now();
-    final samples = [
-      ('daily', 'یادآوری ثبت تراکنش‌ها', 'امروز خرج‌هات رو ثبت کردی؟', now),
-      (
-        'budget',
-        'هشدار بودجه',
-        'به ۸۰٪ سقف دسته‌ی خوراک رسیدی',
-        now.subtract(const Duration(hours: 3)),
-      ),
-      (
-        'weekly',
-        'گزارش هفتگی',
-        'این هفته ۱٬۲۰۰٬۰۰۰ تومان خرج کردی',
-        now.subtract(const Duration(days: 1)),
-      ),
-      (
-        'tips',
-        'پیشنهاد هوشمند',
-        'با کم کردن قهوه‌ی بیرون ماهی ۲۰۰ هزار صرفه‌جویی کن',
-        now.subtract(const Duration(days: 3)),
-      ),
-      (
-        'sms',
-        'تراکنش جدید از پیامک',
-        'برداشت ۳۵۰٬۰۰۰ تومان',
-        now.subtract(const Duration(minutes: 20)),
-      ),
-    ];
-
-    for (final s in samples) {
-      await database
-          .into(database.notifications)
-          .insert(
-            NotificationsCompanion(
-              type: Value(s.$1),
-              title: Value(s.$2),
-              body: Value(s.$3),
-              createdAt: Value(s.$4),
-            ),
-          );
-    }
-    notificationsTicker.value++;
   }
 
   // ═════════════════════════════════════════════
