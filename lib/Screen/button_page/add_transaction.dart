@@ -86,6 +86,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _save() async {
+    // مبلغ تایپ‌شده (به واحد انتخابی) → ریال برای ذخیره تو دیتابیس
     final amount = fromInputAmount(parseAmount(_amountCtrl.text));
     if (amount <= 0) {
       showGlassSnack(context, 'مبلغ رو وارد کن');

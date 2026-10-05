@@ -9,9 +9,8 @@ import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
 class SetBudgetScreen extends StatefulWidget {
-  // ← اضافه شد: اگه این پر باشه، صفحه توی «حالت ویرایش» بازمیشه
-  // و فیلدها با دیتای همین بودجه پر میشن. اگه null باشه، یعنی
-  // «افزودن بودجه‌ی جدید» (رفتار قبلی، بدون تغییر).
+  // اگه این پر باشه، صفحه توی «حالت ویرایش» بازمیشه و فیلدها با
+  // دیتای همین بودجه پر میشن. اگه null باشه، یعنی «افزودن بودجه‌ی جدید».
   final Budget? existingBudget;
 
   const SetBudgetScreen({super.key, this.existingBudget});
@@ -21,11 +20,12 @@ class SetBudgetScreen extends StatefulWidget {
 }
 
 class _SetBudgetScreenState extends State<SetBudgetScreen> {
-  static const int _sliderMax = 20000000;
-  static const int _sliderStep = 100000;
+  // سقف اسلایدر رو به تومان نگه می‌داریم؛ تو حالت ریال ×۱۰ میشه
+  static const int _sliderMaxToman = 20000000;
+  static const int _sliderDivisions = 200;
 
   // سقف اسلایدر به واحد نمایش (تومان یا ریال)
-  int get _maxDisplay => toDisplayAmount(_sliderMax);
+  int get _maxDisplay => isToman ? _sliderMaxToman : _sliderMaxToman * 10;
 
   int _mode = 0;
   final TextEditingController _amountCtrl = TextEditingController();
@@ -38,7 +38,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   DateTime _end = DateTime.now().add(const Duration(days: 30));
 
   bool get _isMonthly => _mode == 0;
-  bool get _isEditing => widget.existingBudget != null; // ← اضافه شد
+  bool get _isEditing => widget.existingBudget != null;
 
   Category? get _selectedCategory =>
       _categoryIndex == null ? null : _categories[_categoryIndex!];
@@ -48,8 +48,9 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     super.initState();
     _amountCtrl.addListener(() => setState(() {}));
 
-    // ← اضافه شد: اگه داریم ویرایش می‌کنیم، فیلدهایی که به لیست
-    // دسته‌ها نیاز ندارن (مبلغ، حالت، تاریخ‌ها) رو همینجا از قبل پر می‌کنیم.
+    // اگه داریم ویرایش می‌کنیم، فیلدهایی که به لیست دسته‌ها نیاز ندارن
+    // (مبلغ، حالت، تاریخ‌ها) رو همینجا از قبل پر می‌کنیم.
+    // مبلغ تو دیتابیس ریاله، پس برای نمایش تو فیلد تبدیل میشه.
     final existing = widget.existingBudget;
     if (existing != null) {
       _mode = existing.period == 'monthly' ? 0 : 1;
@@ -69,8 +70,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
         _categories = list;
         _loadingCategories = false;
 
-        // ← اضافه شد: بعد از لود شدن دسته‌ها، اگه ویرایش می‌کنیم،
-        // اندیس همون دسته‌ای که این بودجه بهش تعلق داره رو پیدا می‌کنیم.
+        // اگه ویرایش می‌کنیم، اندیس دسته‌ی این بودجه رو پیدا می‌کنیم
         final existing = widget.existingBudget;
         if (existing != null) {
           final idx = _categories.indexWhere(
@@ -134,6 +134,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
   }
 
   Future<void> _save() async {
+    // مبلغ تایپ‌شده (به واحد انتخابی) → ریال برای ذخیره تو دیتابیس
     final amount = fromInputAmount(parseAmount(_amountCtrl.text));
     final category = _selectedCategory;
 
@@ -150,8 +151,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
       return;
     }
 
-    // ← اضافه شد: اگه در حالت ویرایشیم، updateBudget صدا زده میشه؛
-    // وگرنه (رفتار قبلی) addBudget یه ردیف جدید می‌سازه.
+    // در حالت ویرایش updateBudget، وگرنه addBudget یه ردیف جدید می‌سازه
     if (_isEditing) {
       await updateBudget(
         id: widget.existingBudget!.id,
@@ -176,8 +176,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     Navigator.of(context).pop();
   }
 
-  // ← متد جدید: حذف بودجه از همین صفحه‌ی ویرایش، با یه باتم‌شیت
-  // تایید هم‌سبک با بقیه‌ی اپ (شبیه همونی که برای حذف تراکنش ساختیم).
+  // حذف بودجه از همین صفحه‌ی ویرایش، با یه باتم‌شیت تایید
   Future<void> _confirmDelete() async {
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -297,7 +296,6 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     ).clamp(0, _maxDisplay).toDouble();
 
     return GlassPage(
-      // ← تغییر کرد: تیتر بسته به حالت افزودن/ویرایش فرق می‌کنه
       title: _isEditing ? 'ویرایش بودجه' : 'تعیین بودجه',
       children: [
         const SizedBox(height: 4),
@@ -342,7 +340,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
                   value: sliderValue,
                   min: 0,
                   max: _maxDisplay.toDouble(),
-                  divisions: _sliderMax ~/ _sliderStep,
+                  divisions: _sliderDivisions,
                   onChanged: (v) => _setAmount(v.round()),
                 ),
               ),
@@ -386,7 +384,7 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
         const SizedBox(height: 24),
         GlassSaveButton(text: 'ذخیره', onPressed: _save),
 
-        // ← اضافه شد: دکمه‌ی حذف، فقط توی حالت ویرایش نشون داده میشه
+        // دکمه‌ی حذف، فقط توی حالت ویرایش نشون داده میشه
         if (_isEditing) ...[
           const SizedBox(height: 12),
           GestureDetector(
