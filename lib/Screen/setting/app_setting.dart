@@ -95,7 +95,6 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               },
             ),
             _SegmentSetting(
-<<<<<<< HEAD
               icon: Icons.language,
               title: 'زبان',
               labels: const ['فارسی', 'English'],
@@ -103,15 +102,6 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               onChanged: (i) {
                 setState(() => _language = i);
                 // TODO: منطق تغییر زبان
-=======
-              icon: Icons.calendar_today_outlined,
-              title: 'زبان',
-              labels: const ['فارسی','English'],
-              selected: _calendar,
-              onChanged: (i) async {
-                setState(() => _calendar = i);
-                await _s.set('calendar', i);
->>>>>>> ed6fe0d6d5d8d15e0221230f512f56649a736f03
               },
             ),
             _SegmentSetting(
