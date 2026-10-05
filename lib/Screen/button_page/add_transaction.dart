@@ -79,13 +79,45 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (i != null && mounted) setState(() => _account = i);
   }
 
+  // ─────────────────────────────────────────────
+  // 🆕 انتخاب تاریخ: جلوگیری از تاریخ آینده + ساعت درست
+  // ─────────────────────────────────────────────
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
     final d = await pickGlassDate(context, _date);
-    if (d != null && mounted) setState(() => _date = d);
+    if (d == null || !mounted) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final picked = DateTime(d.year, d.month, d.day);
+
+    // 🔴 اگه کاربر تاریخ آینده انتخاب کرد، اجازه نده
+    if (picked.isAfter(today)) {
+      showGlassSnack(context, 'تاریخ آینده مجاز نیست');
+      return;
+    }
+
+    // 🕐 اگه امروز بود، ساعتِ الان؛ اگه روزای قبل بود، ظهر (۱۲:۰۰)
+    final finalDate = picked.isAtSameMomentAs(today)
+        ? DateTime(picked.year, picked.month, picked.day, now.hour, now.minute)
+        : DateTime(picked.year, picked.month, picked.day, 12, 0);
+
+    setState(() => _date = finalDate);
   }
 
+  // ─────────────────────────────────────────────
+  // ذخیره: با نگهبان تاریخ آینده
+  // ─────────────────────────────────────────────
   Future<void> _save() async {
+    // 🔴 نگهبان: اطمینان از این‌که تاریخ آینده ثبت نشه
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateDay = DateTime(_date.year, _date.month, _date.day);
+    if (dateDay.isAfter(today)) {
+      showGlassSnack(context, 'تاریخ آینده مجاز نیست');
+      return;
+    }
+
     // مبلغ تایپ‌شده (به واحد انتخابی) → ریال برای ذخیره تو دیتابیس
     final amount = fromInputAmount(parseAmount(_amountCtrl.text));
     if (amount <= 0) {

@@ -43,6 +43,21 @@ Future<void> deleteTransaction(int id) async {
   transactionsTicker.value++;
 }
 
+/// 🆕 پاک‌سازی یک‌باره: هر تراکنشی که تاریخش از الان جلوتره رو حذف می‌کنه.
+/// برای پاک کردن رکوردهای آلوده‌ای که قبل از fix ثبت شده بودن.
+/// می‌تونی یه بار موقع آپدیت اپ صداش بزنی.
+Future<int> cleanupFutureTransactions() async {
+  final now = DateTime.now();
+  final deleted = await (database.delete(
+    database.transactions,
+  )..where((t) => t.date.isBiggerThanValue(now))).go();
+
+  if (deleted > 0) {
+    transactionsTicker.value++;
+  }
+  return deleted;
+}
+
 class TransactionWithCategory {
   final Transaction transaction;
   final Category category;
@@ -68,14 +83,22 @@ Future<List<TransactionWithCategory>> getAllTransactions() async {
   }).toList();
 }
 
+// ─────────────────────────────────────────────
+// 🆕 موجودی کل: فقط تراکنش‌هایی که تاریخشون <= الان
+// (لایه‌ی دفاعی دوم — حتی اگه تراکنش آینده تو دیتابیس بمونه)
+// ─────────────────────────────────────────────
 Future<double> getTotalBalance() async {
+  final now = DateTime.now();
+
   final incomeQ = database.selectOnly(database.transactions)
     ..addColumns([database.transactions.amount.sum()])
-    ..where(database.transactions.type.equals('income'));
+    ..where(database.transactions.type.equals('income'))
+    ..where(database.transactions.date.isSmallerOrEqualValue(now));
 
   final expenseQ = database.selectOnly(database.transactions)
     ..addColumns([database.transactions.amount.sum()])
-    ..where(database.transactions.type.equals('expense'));
+    ..where(database.transactions.type.equals('expense'))
+    ..where(database.transactions.date.isSmallerOrEqualValue(now));
 
   final incomeRow = await incomeQ.getSingleOrNull();
   final expenseRow = await expenseQ.getSingleOrNull();
