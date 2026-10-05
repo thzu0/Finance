@@ -8,7 +8,7 @@ import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/currency_mark.dart';
-import 'package:finance/widget/form_widget.dart';
+import 'package:finance/widget/form_widget.dart'; // showAmount
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
@@ -18,7 +18,7 @@ class _Tx {
   final int id;
   final String title;
   final String category;
-  final int amount;
+  final int amount; // ریال (همون چیزی که تو دیتابیسه)
   final String time;
   final IconData icon;
   final Color color;
@@ -52,6 +52,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
 
   final _s = AppSettings.instance;
 
+  // وقتی تنظیمات (واحد پول، مخفی‌کردن مبالغ) عوض بشه، صفحه دوباره ساخته میشه
   void _onSettings() {
     if (mounted) setState(() {});
   }
@@ -120,16 +121,6 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
       if (_selectedTab == 2) return t.type == TxType.expense;
       return true;
     }).toList();
-  }
-
-  String _fmt(int n) {
-    final s = n.toString();
-    final b = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-      b.write(s[i]);
-    }
-    return b.toString();
   }
 
   Future<void> _confirmDelete(_Tx t) async {
@@ -567,7 +558,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                           color: amountColor,
                         ),
                       ),
-                      SizedBox(width: 5),
+                      const SizedBox(width: 5),
                       CurrencyMark(
                         color: isIncome ? 'green' : 'red',
                         width: 25,
