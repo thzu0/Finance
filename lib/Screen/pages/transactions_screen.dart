@@ -8,6 +8,7 @@ import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/currency_mark.dart';
+import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
@@ -558,9 +559,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _s.get<bool>('hide_amounts', false)
-                            ? '•••'
-                            : _fmt(t.amount).farsiNumber,
+                        showAmount(t.amount),
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                           fontFamily: 'Lalezar',

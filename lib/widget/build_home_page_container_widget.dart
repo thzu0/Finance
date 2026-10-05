@@ -3,7 +3,7 @@
 //todos make this month card be real with database with milion or hezar currency
 //todos make donut chart real with database
 import 'package:finance/Constans/constans.dart';
-import 'package:finance/Constans/extention.dart';
+
 import 'package:finance/Screen/button_page/add_transaction.dart';
 import 'package:finance/Screen/button_page/set_budget.dart';
 import 'package:finance/database/app_setting.dart';
@@ -207,11 +207,7 @@ class _BuildHomePageState extends State<BuildHomePage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _loading
-                              ? '...'
-                              : (_hide
-                                    ? '•••'
-                                    : formatAmount(_balance.round())),
+                          _loading ? '...' : showAmount(_balance.round()),
                           textDirection: TextDirection.rtl,
                           style: TextStyle(
                             fontFamily: 'Vazirmatn',

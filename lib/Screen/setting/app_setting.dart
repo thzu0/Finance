@@ -18,7 +18,7 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
   final _s = AppSettings.instance;
 
   late int _currency = _s.get<int>('currency', 0); // 0 = تومان ، 1 = ریال
-  late int _calendar = _s.get<int>('calendar', 0); // 0 = شمسی ، 1 = میلادی
+  int _language = 0; // 0 = فارسی ، 1 = English  (فعلاً فقط UI)
   late int _digits = _s.get<int>('digits', 0); // 0 = فارسی ، 1 = انگلیسی
   late bool _hideAmounts = _s.get<bool>('hide_amounts', false);
   late bool _haptic = _s.get<bool>('haptic', true);
@@ -95,13 +95,13 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               },
             ),
             _SegmentSetting(
-              icon: Icons.calendar_today_outlined,
-              title: 'تقویم',
-              labels: const ['شمسی', 'میلادی'],
-              selected: _calendar,
-              onChanged: (i) async {
-                setState(() => _calendar = i);
-                await _s.set('calendar', i);
+              icon: Icons.language,
+              title: 'زبان',
+              labels: const ['فارسی', 'English'],
+              selected: _language,
+              onChanged: (i) {
+                setState(() => _language = i);
+                // TODO: منطق تغییر زبان
               },
             ),
             _SegmentSetting(

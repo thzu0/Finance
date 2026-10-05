@@ -7,24 +7,27 @@ import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/budget_repository.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/widget/form_widget.dart'; // showAmount , currencyName
 
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
-import 'package:persian_datetime_picker/persian_datetime_picker.dart'; // ← اضافه شد: برای کلاس Jalali
+import 'package:persian_datetime_picker/persian_datetime_picker.dart'; // برای کلاس Jalali
 
 // ==========================================
 // مدل بودجه‌ی هر دسته (فقط برای نمایش توی UI؛ دیتای واقعی از BudgetWithSpent میاد)
+// همه‌ی مبالغ اینجا «ریال» هستن (همون چیزی که تو دیتابیسه).
+// تبدیل به تومان فقط موقع نمایش و توسط showAmount انجام میشه.
 // ==========================================
 class _Budget {
-  final Budget raw; // ← اضافه شد: خودِ ردیف بودجه از دیتابیس، برای ویرایش
+  final Budget raw; // خودِ ردیف بودجه از دیتابیس، برای ویرایش
   final String name;
   final IconData icon;
   final int spent;
   final int limit;
 
   const _Budget({
-    required this.raw, // ← اضافه شد
+    required this.raw,
     required this.name,
     required this.icon,
     required this.spent,
@@ -48,14 +51,12 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   static const Color _blue = Color(0xFF4C7DFF);
   static const double _warnThreshold = 0.8;
 
-  // ← تغییر کرد: به‌جای DateTime میلادی، حالا مستقیم یه Jalali نگه
-  // می‌داریم. چون budget_repository الان با سال/ماه *شمسی* کار
-  // می‌کنه (نه میلادی)، دیگه نیازی به تبدیل رفت‌وبرگشتی نیست و
-  // مشکل «۳ مهر زیر شهریور نشون داده میشه» از ریشه حل میشه.
+  // ماه انتخاب‌شده به‌صورت Jalali (چون budget_repository با سال/ماه شمسی کار می‌کنه)
   Jalali _selectedMonth = Jalali.now();
 
   final _s = AppSettings.instance;
 
+  // وقتی تنظیمات (واحد پول، مخفی‌کردن مبالغ) عوض بشه، صفحه دوباره ساخته میشه
   void _onSettings() {
     if (mounted) setState(() {});
   }
@@ -67,9 +68,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   void initState() {
     super.initState();
     _load();
-    // ← وقتی خودِ یه بودجه اضافه/حذف بشه (budgetsTicker) یا وقتی یه
-    // تراکنش جدید ثبت/حذف بشه (transactionsTicker)، چون "خرج‌شده"
-    // از روی تراکنش‌ها محاسبه میشه، باید هر دو رو گوش بدیم.
+    // بودجه یا تراکنش عوض بشه، «خرج‌شده» هم عوض میشه
     budgetsTicker.addListener(_load);
     transactionsTicker.addListener(_load);
     _s.changes.addListener(_onSettings);
@@ -83,11 +82,8 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     super.dispose();
   }
 
-  // ← متد جدید: بودجه‌های ماه انتخاب‌شده رو از دیتابیس واقعی می‌خونه
-  // و به مدل نمایشی _Budget تبدیل می‌کنه.
+  // بودجه‌های ماه انتخاب‌شده رو از دیتابیس می‌خونه
   Future<void> _load() async {
-    // ← تغییر کرد: چون _selectedMonth الان خودش Jalali‌ه، مستقیم
-    // year/month شمسیش رو به getBudgetsForMond پاس می‌دیم (بدون تبدیل).
     final rows = await getBudgetsForMonth(
       _selectedMonth.year,
       _selectedMonth.month,
@@ -95,7 +91,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
 
     final list = rows.map((r) {
       return _Budget(
-        raw: r.budget, // ← اضافه شد
+        raw: r.budget,
         name: r.category.name,
         icon: iconFromName(r.category.icon),
         spent: r.spent.round(),
@@ -117,27 +113,11 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     return _good;
   }
 
-  String _fmt(int n) {
-    final s = n.abs().toString();
-    final b = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-      b.write(s[i]);
-    }
-    return b.toString();
-  }
+  // مبلغ دیتابیس (ریال) → متن قابل نمایش.
+  // واحد پول (تومان/ریال)، ارقام فارسی و مخفی‌سازی رو خودش اعمال می‌کنه.
+  String _num(int rial) => showAmount(rial);
 
-  String _num(int n) =>
-      _s.get<bool>('hide_amounts', false) ? '•••' : _fmt(n).farsiNumber;
-
-  // ← تغییر کرد: قبلاً روی DateTime میلادی کار می‌کرد (کامنت قدیمی
-  // زیر همین متد بود که پاک نکردیم چون گفتی دست نزنم، ولی منطق
-  // واقعی الان روی Jalali اجرا میشه). shamsi_date خودش سرریز سال
-  // رو مدیریت نمی‌کنه به‌صورت خودکار مثل DateTime، برای همین خودمون
-  // دستی چک می‌کنیم: اگه از ماه ۱۲ (اسفند) به بعد رفتیم یا از ماه
-  // ۱ (فروردین) به قبل رفتیم، سال رو دستی عوض می‌کنیم.
-  // جابه‌جایی واقعی بین ماه‌های میلادی (کتابخونه‌ی DateTime خودش
-  // سرریز سال رو هندل می‌کنه، مثلاً ماه ۱۳ خودش میشه فروردین سال بعد)
+  // shamsi_date سرریز سال رو خودکار مدیریت نمی‌کنه، پس دستی چک می‌کنیم
   void _shiftMonth(int delta) {
     setState(() {
       final newMonth = _selectedMonth.month + delta;
@@ -149,7 +129,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
         _selectedMonth = Jalali(_selectedMonth.year, newMonth, 1);
       }
     });
-    _load(); // ← ماه که عوض شد، بودجه‌های همون ماه رو دوباره می‌خونیم
+    _load(); // ماه که عوض شد، بودجه‌های همون ماه رو دوباره می‌خونیم
   }
 
   @override
@@ -247,10 +227,6 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
             ),
           ),
           Text(
-            // ← تغییر کرد: قبلاً اینجا formatJalaliMonth(_selectedMonth)
-            // بود که ورودی میلادی می‌گرفت. چون _selectedMonth الان
-            // خودش Jalali‌ه، مستقیم از تابع کمکی جدید _jalaliMonthLabel
-            // (پایین همین کلاس) استفاده می‌کنیم.
             _jalaliMonthLabel(_selectedMonth),
             style: TextStyle(
               fontFamily: 'Lalezar',
@@ -271,9 +247,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     );
   }
 
-  // ← اضافه شد: اسم ماه‌های شمسی، برای نمایش توی _buildMonthSelector.
-  // چون formatJalaliMonth (توی form_widget.dart) ورودی میلادی می‌خواست
-  // و الان دیگه میلادی نداریم، این نسخه‌ی مخصوص Jalali رو اضافه کردیم.
+  // اسم ماه‌های شمسی برای نمایش توی _buildMonthSelector
   static const List<String> _jalaliMonthNames = [
     'فروردین',
     'اردیبهشت',
@@ -289,17 +263,15 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     'اسفند',
   ];
 
-  // ← اضافه شد: مثلاً «مهر ۱۴۰۵»
+  // مثلاً «مهر ۱۴۰۵»
   String _jalaliMonthLabel(Jalali j) {
     return '${_jalaliMonthNames[j.month - 1]} ${j.year.toString().farsiNumber}';
   }
 
-  // ← وضعیت خالی: وقتی هنوز هیچ بودجه‌ای برای این ماه ثبت نشده
+  // وقتی هنوز هیچ بودجه‌ای برای این ماه ثبت نشده
   Widget _buildEmptyState() {
     return SizedBox(
-      height:
-          MediaQuery.of(context).size.height *
-          0.45, // ← ارتفاع مشخص تا Center واقعاً کار کنه
+      height: MediaQuery.of(context).size.height * 0.45,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -326,6 +298,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   }
 
   Widget _buildSummaryCard() {
+    // جمع‌ها تو واحد ریال حساب میشن و آخرش توسط _num تبدیل میشن
     final totalLimit = _budgets.fold<int>(0, (s, b) => s + b.limit);
     final totalSpent = _budgets.fold<int>(0, (s, b) => s + b.spent);
     final remaining = totalLimit - totalSpent;
@@ -412,7 +385,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     if (over.isEmpty) return const SizedBox.shrink();
 
     final text = over.length == 1
-        ? 'بودجه‌ی «${over.first.name}» ${_num(over.first.spent - over.first.limit)} تومان رد شده'
+        ? 'بودجه‌ی «${over.first.name}» ${_num(over.first.spent - over.first.limit)} $currencyName رد شده'
         : '${over.length.toString().farsiNumber} دسته از سقف بودجه رد شده';
 
     return Padding(
@@ -449,9 +422,9 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Row(
         children: [
-          Text(
+          const Text(
             'دسته‌ها',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Lalezar',
               fontSize: 18,
               color: Color(0xFF7FB2FF),
@@ -459,7 +432,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
           ),
           const Spacer(),
           Text(
-            'مبالغ به تومان',
+            'مبالغ به $currencyName',
             style: TextStyle(
               fontFamily: 'Lalezar',
               fontSize: 13,
@@ -481,10 +454,8 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: GestureDetector(
         onTap: () {
-          // ← تغییر کرد: قبلاً فقط یه TODO بود، الان واقعاً به صفحه‌ی
-          // SetBudgetScreen با دیتای همین بودجه (b.raw) میره. چون
-          // updateBudget/deleteBudget خودشون budgetsTicker رو صدا
-          // می‌زنن، این صفحه خودکار بعد از برگشت رفرش میشه.
+          // رفتن به صفحه‌ی ویرایش بودجه؛ updateBudget/deleteBudget
+          // خودشون budgetsTicker رو صدا می‌زنن و این صفحه رفرش میشه
           Navigator.push(
             context,
             PageTransition(

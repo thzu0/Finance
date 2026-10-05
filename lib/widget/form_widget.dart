@@ -50,29 +50,31 @@ String formatAmount(int n) {
 bool get amountsHidden => AppSettings.instance.get<bool>('hide_amounts', false);
 
 // ─── واحد پول ───
-// توی دیتابیس همیشه «تومان» ذخیره میشه. فقط موقع نمایش ×۱۰ میشه.
+// توی دیتابیس همیشه «ریال» ذخیره میشه (مثل پیامک بانکی، بدون هیچ تبدیلی).
+// فقط موقع نمایش، اگه «تومان» انتخاب شده باشه ÷۱۰ میشه.
+// مقدار تنظیم: 0 = تومان ، 1 = ریال
 
-/// آیا کاربر ریال رو انتخاب کرده؟
-bool get isRial => AppSettings.instance.get<int>('currency', 0) == 1;
+/// آیا کاربر تومان رو انتخاب کرده؟
+bool get isToman => AppSettings.instance.get<int>('currency', 0) == 0;
 
 /// اسم واحد برای نمایش توی متن‌ها
-String get currencyName => isRial ? 'ریال' : 'تومان';
+String get currencyName => isToman ? 'تومان' : 'ریال';
 
-/// مبلغ ذخیره‌شده (تومان) → مبلغ قابل نمایش
-int toDisplayAmount(int toman) => isRial ? toman * 10 : toman;
+/// مبلغ ذخیره‌شده (ریال) → مبلغ قابل نمایش
+int toDisplayAmount(int rial) => isToman ? rial ~/ 10 : rial;
 
-/// مبلغی که کاربر تایپ کرده (به واحد انتخابی) → تومان برای ذخیره
-int fromInputAmount(int typed) => isRial ? typed ~/ 10 : typed;
+/// مبلغی که کاربر تایپ کرده (به واحد انتخابی) → ریال برای ذخیره
+int fromInputAmount(int typed) => isToman ? typed * 10 : typed;
 
 /// برای نمایش مبلغ توی UI (نه فیلد ورودی):
 /// مخفی‌سازی رو چک می‌کنه، بعد واحد پول رو اعمال می‌کنه
-String showAmount(int n) =>
-    amountsHidden ? '•••' : formatAmount(toDisplayAmount(n));
+String showAmount(int rial) =>
+    amountsHidden ? '•••' : formatAmount(toDisplayAmount(rial));
 
 /// برای وسط دونات: (عدد کوتاه‌شده، واحد) مثلاً ('۳٫۲', 'میلیون تومان')
-(String, String) centerAmountParts(int toman) {
+(String, String) centerAmountParts(int rial) {
   if (amountsHidden) return ('•••', '');
-  final v = toDisplayAmount(toman);
+  final v = toDisplayAmount(rial);
   if (v >= 1000000) {
     final m = v / 1000000;
     final s = (m - m.roundToDouble()).abs() < 0.05
@@ -648,7 +650,7 @@ class AmountField extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'تومان',
+                currencyName,
                 style: glassText(18, color: Constans.textSecondary),
               ),
             ],

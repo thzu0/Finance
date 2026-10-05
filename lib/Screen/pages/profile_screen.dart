@@ -5,7 +5,7 @@ import 'package:finance/Screen/setting/account_security_screen.dart';
 import 'package:finance/Screen/setting/app_setting.dart';
 import 'package:finance/Screen/setting/credit_card_screen.dart';
 import 'package:finance/Screen/setting/help_support_screen.dart';
-import 'package:finance/Screen/setting/language_screen.dart';
+
 import 'package:finance/Screen/setting/notification_screen.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/widget/glass_box_widget.dart';
@@ -102,19 +102,7 @@ class _ProfilescreenState extends State<Profilescreen> {
           );
         },
       ),
-      _ProfileOption(
-        icon: Icons.language,
-        title: 'زبان',
-        onTap: () {
-          Navigator.push(
-            context,
-            PageTransition(
-              type: PageTransitionType.fade,
-              child: Languagescreen(),
-            ),
-          );
-        },
-      ),
+
       _ProfileOption(
         icon: Icons.help_outline,
         title: 'راهنما و پشتیبانی',
