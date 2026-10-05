@@ -10,22 +10,16 @@ import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 // ==========================================
 // ارقام فارسی / انگلیسی
 // ==========================================
-const List<String> _faDigits = [
-  '۰',
-  '۱',
-  '۲',
-  '۳',
-  '۴',
-  '۵',
-  '۶',
-  '۷',
-  '۸',
-  '۹',
-];
+// نوع ارقام از تنظیمات میاد (0 = فارسی ، 1 = انگلیسی) و توسط
+// اکستنشن farsiNumber اعمال میشه.
 
-String toPersianDigits(String s) =>
-    s.replaceAllMapped(RegExp(r'[0-9]'), (m) => _faDigits[int.parse(m[0]!)]);
+/// آیا کاربر ارقام انگلیسی رو انتخاب کرده؟
+bool get useEnglishDigits => AppSettings.instance.get<int>('digits', 0) == 1;
 
+/// ارقام رو بر اساس تنظیمات (فارسی یا انگلیسی) برمی‌گردونه
+String toPersianDigits(String s) => s.farsiNumber;
+
+/// همیشه ارقام لاتین برمی‌گردونه (برای پارس کردن ورودی کاربر)
 String toLatinDigits(String s) => s.replaceAllMapped(RegExp(r'[۰-۹٠-٩]'), (m) {
   final c = m[0]!.codeUnitAt(0);
   return (c >= 0x06F0 ? c - 0x06F0 : c - 0x0660).toString();
@@ -35,7 +29,7 @@ String toLatinDigits(String s) => s.replaceAllMapped(RegExp(r'[۰-۹٠-٩]'), (m
 int parseAmount(String s) =>
     int.tryParse(toLatinDigits(s).replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
 
-/// 12500000 → «۱۲,۵۰۰,۰۰۰»
+/// 12500000 → «۱۲,۵۰۰,۰۰۰» (یا «12,500,000» تو حالت ارقام انگلیسی)
 String formatAmount(int n) {
   final s = n.abs().toString();
   final b = StringBuffer();
@@ -75,21 +69,25 @@ String showAmount(int rial) =>
 (String, String) centerAmountParts(int rial) {
   if (amountsHidden) return ('•••', '');
   final v = toDisplayAmount(rial);
+
+  // جداکننده‌ی اعشار: «٫» برای فارسی ، «.» برای انگلیسی
+  final sep = useEnglishDigits ? '.' : '٫';
+
   if (v >= 1000000) {
     final m = v / 1000000;
     final s = (m - m.roundToDouble()).abs() < 0.05
         ? m.round().toString()
-        : m.toStringAsFixed(1).replaceAll('.', '٫');
+        : m.toStringAsFixed(1).replaceAll('.', sep);
     return (toPersianDigits(s), 'میلیون $currencyName');
   }
   final k = v / 1000;
   final s = (k - k.roundToDouble()).abs() < 0.05
       ? k.round().toString()
-      : k.toStringAsFixed(1).replaceAll('.', '٫');
+      : k.toStringAsFixed(1).replaceAll('.', sep);
   return (toPersianDigits(s), 'هزار $currencyName');
 }
 
-/// موقع تایپ، عدد رو فارسی و سه‌رقم‌سه‌رقم جدا می‌کنه
+/// موقع تایپ، عدد رو سه‌رقم‌سه‌رقم جدا می‌کنه (با نوع ارقام انتخابی)
 class ThousandsFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -510,7 +508,7 @@ Future<int?> showGlassOptionSheet(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (ctx) {
-      // عرض هر آیتم: سه‌تا تو هر ردیف
+      // عرض هر آیتم: چهارتا تو هر ردیف
       final itemWidth = (MediaQuery.of(ctx).size.width - 40 - 36) / 4;
       return Directionality(
         textDirection: TextDirection.rtl,
@@ -638,7 +636,7 @@ class AmountField extends StatelessWidget {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     isCollapsed: true,
-                    hintText: '۰',
+                    hintText: '0'.farsiNumber,
                     hintStyle: TextStyle(
                       fontFamily: 'Vazirmatn',
                       fontSize: 36,

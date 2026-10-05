@@ -1,4 +1,3 @@
-// ignore: file_names
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
