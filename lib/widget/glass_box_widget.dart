@@ -75,12 +75,19 @@ TextStyle glassText(double size, {Color? color}) => TextStyle(
 // ==========================================
 // اسکلت مشترک همه‌ی صفحه‌های داخلی
 // دکمه‌ی برگشت سمت راست، کنار تیتر
+// leading (اختیاری): ویجتی سمت چپ اپ‌بار، مثلاً منوی سه‌نقطه
 // ==========================================
 class GlassPage extends StatelessWidget {
   final String title;
   final List<Widget> children;
+  final Widget? leading;
 
-  const GlassPage({super.key, required this.title, required this.children});
+  const GlassPage({
+    super.key,
+    required this.title,
+    required this.children,
+    this.leading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +96,8 @@ class GlassPage extends StatelessWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: leading,
+        leadingWidth: 64,
         toolbarHeight: 80,
         backgroundColor: Colors.transparent,
         elevation: 0.0,
