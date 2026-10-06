@@ -84,6 +84,8 @@ class _Tx {
   final Color color;
   final TxType type;
   final bool isToday;
+  final bool isSms;
+  final String bankName;
 
   const _Tx({
     required this.id,
@@ -96,6 +98,8 @@ class _Tx {
     required this.color,
     required this.type,
     required this.isToday,
+    required this.isSms,
+    required this.bankName,
   });
 }
 
@@ -172,18 +176,45 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
           t.date.month == now.month &&
           t.date.day == now.day;
 
+      final note = t.note;
+      final isSms = note.startsWith('پیامک');
+      final isIncome = t.type == 'income';
+
+      // عنوان
+      final String title;
+      if (isSms) {
+        title = isIncome ? 'واریز' : 'برداشت';
+      } else if (note.isNotEmpty) {
+        title = note;
+      } else {
+        title = c.name;
+      }
+
+      // آیکون و رنگ
+      final IconData icon;
+      final Color iconColor;
+      if (isSms) {
+        icon = isIncome ? Icons.south_west_rounded : Icons.north_east_rounded;
+        iconColor = isIncome ? _income : _expense;
+      } else {
+        icon = iconFromName(c.icon);
+        iconColor = hexToColor(c.color);
+      }
+
       return _Tx(
         id: t.id,
-        title: t.note.isNotEmpty ? t.note : c.name,
+        title: title,
         category: c.name,
         amount: t.amount.toInt(),
         date: t.date,
         time:
             '${t.date.hour.toString().padLeft(2, '0')}:${t.date.minute.toString().padLeft(2, '0')}',
-        icon: iconFromName(c.icon),
-        color: hexToColor(c.color),
-        type: t.type == 'income' ? TxType.income : TxType.expense,
+        icon: icon,
+        color: iconColor,
+        type: isIncome ? TxType.income : TxType.expense,
         isToday: isToday,
+        isSms: isSms,
+        bankName: isSms ? note.replaceFirst('پیامک', '').trim() : '',
       );
     }).toList();
 
@@ -1083,27 +1114,66 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
               ),
               const SizedBox(width: 12),
 
-              // عنوان و دسته
+              // عنوان + زیرعنوان
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Lalezar',
                         fontSize: 19,
                         color: Constans.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      t.category,
-                      style: TextStyle(
-                        fontFamily: 'Lalezar',
-                        fontSize: 14,
-                        color: Constans.textSecondary,
-                      ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        // چیپ دسته — فقط برای تراکنش‌های دستی
+                        if (!t.isSms) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.12),
+                              ),
+                            ),
+                            child: Text(
+                              t.category,
+                              style: TextStyle(
+                                fontFamily: 'Lalezar',
+                                fontSize: 12,
+                                color: Constans.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                        // برچسب منبع پیامکی
+                        if (t.isSms && t.bankName.isNotEmpty) ...[
+                          Icon(
+                            Icons.sms_outlined,
+                            size: 14,
+                            color: Constans.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            t.bankName,
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 13,
+                              color: Constans.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -1117,7 +1187,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        showAmount(t.amount),
+                        '${isIncome ? '+' : '−'}${showAmount(t.amount)}',
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                           fontFamily: 'Lalezar',
