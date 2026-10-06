@@ -1,4 +1,8 @@
+import 'package:drift/drift.dart' show OrderingTerm;
+import 'package:finance/database/database_provider.dart';
+import 'package:finance/services/notification_service.dart' as db;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -274,14 +278,70 @@ class LocalPushService {
   }
 
   // ─────────────────────────────────────────
-  // کاربر روی نوتیف زد
+  // کاربر روی نوتیف زد → توی دیتابیس ذخیره کن
   // ─────────────────────────────────────────
   static void _onTap(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
+    _recordTap(response);
   }
 
   @pragma('vm:entry-point')
   static void _onBackgroundTap(NotificationResponse response) {
+    WidgetsFlutterBinding.ensureInitialized();
     debugPrint('Notification tapped (background): ${response.payload}');
+    _recordTap(response);
+  }
+
+  /// اطلاعات هر payload: (title, body, type)
+  static (String, String, String)? _payloadInfo(String? payload) {
+    switch (payload) {
+      case payloadDaily:
+        return (
+          'یادآوری ثبت تراکنش‌ها',
+          'امروز چه خرج‌هایی داشتی؟ بیا ثبتشون کن',
+          'daily',
+        );
+      case payloadWeekly:
+        return ('گزارش هفتگی', 'این هفته چقدر خرج کردی؟ ببین', 'weekly');
+      case payloadMonthly:
+        return (
+          'خلاصه‌ی ماهانه',
+          'مرور خرج و درآمد ماه گذشته‌ت آماده‌ست',
+          'monthly',
+        );
+      case payloadBudget:
+        return ('هشدار بودجه', 'به سقف بودجه‌ت رسیدی', 'budget');
+      case payloadTips:
+        return ('پیشنهاد هوشمند', 'یه نکته برای کم کردن خرج', 'tips');
+      default:
+        return null;
+    }
+  }
+
+  /// نوتیف رو توی تاریخچه‌ی اپ ثبت می‌کنه (با جلوگیری از تکراری)
+  static Future<void> _recordTap(NotificationResponse response) async {
+    final info = _payloadInfo(response.payload);
+    if (info == null) return;
+
+    final (title, body, type) = info;
+
+    try {
+      // جلوگیری از تکراری: اگه همین نوع توی ۵ دقیقه‌ی گذشته ثبت شده، نذار
+      final recent =
+          await (database.select(database.notifications)
+                ..where((n) => n.type.equals(type))
+                ..orderBy([(n) => OrderingTerm.desc(n.createdAt)])
+                ..limit(1))
+              .get();
+
+      if (recent.isNotEmpty &&
+          DateTime.now().difference(recent.first.createdAt).inMinutes < 5) {
+        return;
+      }
+
+      await db.NotificationService.create(title: title, body: body, type: type);
+    } catch (e) {
+      debugPrint('Failed to record notification tap: $e');
+    }
   }
 }

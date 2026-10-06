@@ -5,6 +5,8 @@ import 'package:finance/Screen/setting/notification_history_screen.dart'
 
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/services/local_push_service.dart';
+import 'package:finance/services/notification_scheduler.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
@@ -53,7 +55,9 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
     });
     await _s.set('notif_daily_hour', _hour);
     await _s.set('notif_daily_minute', _minute);
-    // TODO فاز ۳: زمان‌بندی مجدد یادآور
+
+    // 🆕 زمان‌بندی مجدد یادآور روزانه
+    await NotificationScheduler.instance.syncDailyReminder();
   }
 
   void _openHistory() {
@@ -83,6 +87,12 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
               onChanged: (v) async {
                 setState(() => _enabled = v);
                 await _s.set('notif_enabled', v);
+                // 🆕 اگه روشن شد همه‌ی زمان‌بندی‌ها رو ثبت کن، اگه خاموش شد همه رو لغو کن
+                if (v) {
+                  await NotificationScheduler.instance.syncAll();
+                } else {
+                  await LocalPushService.instance.cancelAll();
+                }
               },
             ),
             GlassTile(
@@ -112,6 +122,9 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       onChanged: (v) async {
                         setState(() => _daily = v);
                         await _s.set('notif_daily', v);
+                        // 🆕
+                        await NotificationScheduler.instance
+                            .syncDailyReminder();
                       },
                     ),
                     if (_daily)
@@ -137,6 +150,7 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       onChanged: (v) async {
                         setState(() => _budgetAlert = v);
                         await _s.set('notif_budget_alert', v);
+                        // 🆕 (اختیاری — چک بودجه توسط Workmanager هر ۱۵ دقیقه اجرا می‌شه)
                       },
                     ),
                     GlassSwitchTile(
@@ -162,6 +176,8 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       onChanged: (v) async {
                         setState(() => _weekly = v);
                         await _s.set('notif_weekly', v);
+                        // 🆕
+                        await NotificationScheduler.instance.syncWeeklyReport();
                       },
                     ),
                     GlassSwitchTile(
@@ -172,6 +188,9 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       onChanged: (v) async {
                         setState(() => _monthly = v);
                         await _s.set('notif_monthly', v);
+                        // 🆕
+                        await NotificationScheduler.instance
+                            .syncMonthlyReport();
                       },
                     ),
                   ],
