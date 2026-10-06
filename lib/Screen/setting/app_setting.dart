@@ -2,9 +2,12 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
 import 'package:finance/services/sms_permission.dart';
+import 'package:finance/services/sms_sync_service.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
+
+import 'package:finance/database/transaction_repository.dart';
 
 class Appsettingsscreen extends StatefulWidget {
   const Appsettingsscreen({super.key});
@@ -36,6 +39,7 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
 
   Future<void> _toggleSms(bool enable) async {
     if (!enable) {
+      await freezeBalanceOffset(); // قبل از disable، موجودی فعلی رو قفل کن
       await SmsPermissionService.disable();
       if (!mounted) return;
       setState(() => _smsEnabled = false);
@@ -53,7 +57,12 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
     switch (result) {
       case SmsPermissionResult.granted:
         setState(() => _smsEnabled = true);
-        showGlassSnack(context, 'خواندن خودکار پیامک فعال شد');
+        final n = await SmsSyncService.sync();
+        if (!mounted) return;
+        showGlassSnack(
+          context,
+          n > 0 ? '$n تراکنش جدید ثبت شد' : 'خواندن خودکار پیامک فعال شد',
+        );
         break;
       case SmsPermissionResult.denied:
         setState(() => _smsEnabled = false);

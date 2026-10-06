@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:finance/database/app_database.dart';
+
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/seed_categories.dart';
