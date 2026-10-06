@@ -5,10 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.finance"
-    compileSdk = 36   // ← تغییر به 36
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // ✅ برای flutter_local_notifications الزامی
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -16,7 +18,7 @@ android {
     defaultConfig {
         applicationId = "com.example.finance"
         minSdk = flutter.minSdkVersion
-        targetSdk = 36   // ← تغییر به 36
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -36,4 +38,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ برای flutter_local_notifications الزامی
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

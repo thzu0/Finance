@@ -2,16 +2,35 @@ import 'package:finance/Onboard/onboarding_page.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/seed_categories.dart';
 import 'package:finance/security/app_lock_gate.dart';
+import 'package:finance/services/background_worker.dart';
+import 'package:finance/services/local_push_service.dart';
+import 'package:finance/services/notification_scheduler.dart';
 import 'package:finance/services/sms_sync_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import 'package:workmanager/workmanager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await AppSettings.instance.load();
   await seedCategoriesIfEmpty();
+
+  await LocalPushService.instance.init();
+
+  await Workmanager().initialize(callbackDispatcher);
+
+  await Workmanager().registerPeriodicTask(
+    taskCheckBudget,
+    taskCheckBudget,
+    frequency: const Duration(minutes: 15),
+    constraints: Constraints(networkType: NetworkType.notRequired),
+  );
+
+  await NotificationScheduler.instance.syncAll();
+
   runApp(const MyApp());
 }
 
@@ -27,7 +46,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // بعد از اولین فریم، اسکن اولیه
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SmsSyncService.sync();
     });
