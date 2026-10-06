@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
+import 'package:finance/database/app_setting.dart';
+import 'package:finance/database/card_service.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'app_database.dart';
 import 'database_provider.dart';
-import 'package:persian_datetime_picker/persian_datetime_picker.dart'; // ← اضافه شد
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 /// یه تراکنش جدید (هزینه یا درآمد) به دیتابیس اضافه می‌کنه.
 Future<int> addTransaction({
@@ -12,7 +14,6 @@ Future<int> addTransaction({
   required String type,
   String note = '',
 }) async {
-  // این خط دقیقاً همون کد قبلی توئه (فقط await گرفتیم تا بشه بعدش کد اضافه کرد)
   final id = await database
       .into(database.transactions)
       .insert(
@@ -25,27 +26,22 @@ Future<int> addTransaction({
         ),
       );
 
-  // ← خط جدید: به همه‌ی صفحه‌هایی که لیست تراکنش‌ها رو نشون میدن خبر میده
-  // که دیتا تغییر کرده، تا خودشون رو رفرش کنن.
+  // به همه‌ی صفحه‌هایی که دیتا نشون میدن خبر میده رفرش بشن
   transactionsTicker.value++;
 
   return id;
 }
 
 /// یه تراکنش رو با شناسه‌ش (id) از دیتابیس حذف می‌کنه.
-/// این تابع جدیده — برای مشکل #۴ (حذف با نگه‌داشتن روی تراکنش) لازمش داری.
 Future<void> deleteTransaction(int id) async {
   await (database.delete(
     database.transactions,
   )..where((t) => t.id.equals(id))).go();
 
-  // ← اینجا هم بعد از حذف، به همه خبر میدیم که دیتا تغییر کرد
   transactionsTicker.value++;
 }
 
-/// 🆕 پاک‌سازی یک‌باره: هر تراکنشی که تاریخش از الان جلوتره رو حذف می‌کنه.
-/// برای پاک کردن رکوردهای آلوده‌ای که قبل از fix ثبت شده بودن.
-/// می‌تونی یه بار موقع آپدیت اپ صداش بزنی.
+/// پاک‌سازی یک‌باره: هر تراکنشی که تاریخش از الان جلوتره رو حذف می‌کنه.
 Future<int> cleanupFutureTransactions() async {
   final now = DateTime.now();
   final deleted = await (database.delete(
@@ -65,7 +61,6 @@ class TransactionWithCategory {
 }
 
 /// همه‌ی تراکنش‌ها رو همراه با دسته‌بندی‌شون از دیتابیس می‌خونه
-/// (این تابع دست نخورده باقی مونده، همون کد قبلی خودته)
 Future<List<TransactionWithCategory>> getAllTransactions() async {
   final query = database.select(database.transactions).join([
     innerJoin(
@@ -84,8 +79,49 @@ Future<List<TransactionWithCategory>> getAllTransactions() async {
 }
 
 // ─────────────────────────────────────────────
-// 🆕 موجودی کل: فقط تراکنش‌هایی که تاریخشون <= الان
-// (لایه‌ی دفاعی دوم — حتی اگه تراکنش آینده تو دیتابیس بمونه)
+// 🆕 آفست موجودی (برای کاربرهایی که خوندن پیامک روشنه)
+// ─────────────────────────────────────────────
+
+/// اختلاف «مانده‌ی پیامک» با جمع تراکنش‌ها تا لحظه‌ی همون پیامک (زنده)
+Future<double> _liveOffset() async {
+  final s = AppSettings.instance;
+  final ts = s.get<int>('sms_bal_ts', 0);
+  if (ts == 0) return 0;
+
+  final upTo = DateTime.fromMillisecondsSinceEpoch(
+    ts,
+  ).add(const Duration(seconds: 1));
+  final inc = await _sumByTypeBefore('income', upTo);
+  final exp = await _sumByTypeBefore('expense', upTo);
+
+  return s.get<int>('sms_bal_rial', 0) - (inc - exp);
+}
+
+/// سوییچ پیامک روشن: لنگر زنده.
+/// سوییچ خاموش: همون عدد ثابتِ لحظه‌ی خاموش شدن (صفر اگه هیچ‌وقت روشن نشده).
+Future<double> _balanceOffset() async {
+  if (CardService.instance.isSmsParsingEnabled()) return _liveOffset();
+  return AppSettings.instance.get<int>('frozen_offset', 0).toDouble();
+}
+
+/// موقع خاموش کردن سوییچ (قبل از disable) صدا بزن: موجودی فعلی رو قفل می‌کنه
+Future<void> freezeBalanceOffset() async {
+  final off = await _liveOffset();
+  await AppSettings.instance.set('frozen_offset', off.round());
+  transactionsTicker.value++;
+}
+
+/// موقع حذف کارت صدا بزن: همه‌ی لنگرها رو پاک می‌کنه
+Future<void> resetBalanceAnchor() async {
+  final s = AppSettings.instance;
+  await s.set('sms_bal_ts', 0);
+  await s.set('sms_bal_rial', 0);
+  await s.set('frozen_offset', 0);
+  transactionsTicker.value++;
+}
+
+// ─────────────────────────────────────────────
+// موجودی کل: فقط تراکنش‌هایی که تاریخشون <= الان
 // ─────────────────────────────────────────────
 Future<double> getTotalBalance() async {
   final now = DateTime.now();
@@ -106,7 +142,7 @@ Future<double> getTotalBalance() async {
   final income = incomeRow?.read(database.transactions.amount.sum()) ?? 0.0;
   final expense = expenseRow?.read(database.transactions.amount.sum()) ?? 0.0;
 
-  return income - expense;
+  return income - expense + await _balanceOffset();
 }
 
 // ── کمکی: جمع یه نوع خاص (income/expense) توی یه بازه‌ی زمانی ──
@@ -120,7 +156,7 @@ Future<double> _sumByType(String type, DateTime start, DateTime end) async {
   return row?.read(database.transactions.amount.sum()) ?? 0.0;
 }
 
-// ── کمکی: جمع یه نوع خاص، قبل از یه تاریخ مشخص (برای موجودی اول ماه) ──
+// ── کمکی: جمع یه نوع خاص، قبل از یه تاریخ مشخص ──
 Future<double> _sumByTypeBefore(String type, DateTime date) async {
   final q = database.selectOnly(database.transactions)
     ..addColumns([database.transactions.amount.sum()])
@@ -130,11 +166,11 @@ Future<double> _sumByTypeBefore(String type, DateTime date) async {
   return row?.read(database.transactions.amount.sum()) ?? 0.0;
 }
 
-/// موجودی حساب درست *قبل* از یه تاریخ مشخص (برای مقایسه‌ی «نسبت به ماه قبل»)
+/// موجودی حساب درست *قبل* از یه تاریخ مشخص
 Future<double> getBalanceBeforeDate(DateTime date) async {
   final income = await _sumByTypeBefore('income', date);
   final expense = await _sumByTypeBefore('expense', date);
-  return income - expense;
+  return income - expense + await _balanceOffset();
 }
 
 class MonthSummary {
@@ -193,10 +229,11 @@ class TrendPoint {
   TrendPoint(this.date, this.balance);
 }
 
-/// موجودی تجمعی برای هر یک از N روز اخیر (شامل امروز)، همراه با تاریخ هر نقطه
+/// موجودی تجمعی برای هر یک از N روز اخیر (شامل امروز)
 Future<List<TrendPoint>> getBalanceTrend(int days) async {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
+  final offset = await _balanceOffset(); // یه بار برای همه‌ی نقطه‌ها
   final result = <TrendPoint>[];
 
   for (int i = days - 1; i >= 0; i--) {
@@ -204,20 +241,18 @@ Future<List<TrendPoint>> getBalanceTrend(int days) async {
     final endOfDay = day.add(const Duration(days: 1));
     final income = await _sumByTypeBefore('income', endOfDay);
     final expense = await _sumByTypeBefore('expense', endOfDay);
-    result.add(TrendPoint(day, income - expense));
+    result.add(TrendPoint(day, income - expense + offset));
   }
 
   return result;
 }
 
 /// درصد تغییر بین مقدار فعلی و قبلی رو حساب می‌کنه.
-/// برمی‌گردونه: (متن درصد فرمت‌شده, آیا افزایش داشته؟)
 ({String text, bool isIncrease}) calculatePercentChange(
   double current,
   double previous,
 ) {
   if (previous == 0) {
-    // ماه قبل چیزی نبوده؛ اگه الان چیزی هست یعنی ۱۰۰٪ افزایش، وگرنه بدون تغییر
     if (current == 0) return (text: '۰٪', isIncrease: true);
     return (text: '۱۰۰٪', isIncrease: true);
   }
@@ -272,7 +307,6 @@ Future<List<SpendingCategory>> getExpenseByCategory(DateTime reference) async {
 
   raw.sort((a, b) => b.value.compareTo(a.value));
 
-  // ← اگه بیش از ۴ دسته داشتیم، بقیه رو زیر «سایر» جمع می‌کنیم
   List<MapEntry<String, double>> grouped;
   if (raw.length > 4) {
     final top = raw.take(4).toList();

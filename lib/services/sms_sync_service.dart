@@ -1,6 +1,6 @@
-//todos regex have a bug in home page all container but in transaction is okey fix it
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
+import 'package:finance/database/database_provider.dart';
 import 'package:finance/sms/bank_sms_parser.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -8,6 +8,9 @@ import 'package:permission_handler/permission_handler.dart';
 class SmsSyncService {
   SmsSyncService._();
   static bool _running = false;
+
+  /// بار اول چند روز عقب‌تر پیامک‌ها خونده بشه (۰ = همه‌ی پیامک‌ها)
+  static const int _firstRunDays = 365;
 
   /// اسم فرستنده‌های هر بانک (طبق چیزی که توی اینباکس گوشی دیده می‌شه)
   static const Map<String, List<String>> _sendersByBank = {
@@ -39,10 +42,11 @@ class SmsSyncService {
       if (senders.isEmpty) return 0;
 
       final s = AppSettings.instance;
-      // بار اول: ۳۰ روز گذشته
-      final firstRun = DateTime.now()
-          .subtract(const Duration(days: 30))
-          .millisecondsSinceEpoch;
+      final firstRun = _firstRunDays == 0
+          ? 0
+          : DateTime.now()
+                .subtract(const Duration(days: _firstRunDays))
+                .millisecondsSinceEpoch;
       final since = s.get<int>('sms_last_ts', firstRun);
 
       // فقط پیامک‌های فرستنده‌ی همین بانک
@@ -71,6 +75,9 @@ class SmsSyncService {
       }
 
       await s.set('sms_last_ts', newest);
+
+      // لنگر ممکنه عوض شده باشه حتی اگه تراکنش جدیدی نیومده؛ هوم رفرش بشه
+      if (fresh.isNotEmpty) transactionsTicker.value++;
       return added;
     } catch (_) {
       return 0;

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:finance/database/app_database.dart';
+import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/seed_categories.dart';
 import 'package:finance/database/transaction_repository.dart';
@@ -110,7 +111,7 @@ class PasargadSmsParser extends BankSmsParser {
   }
 }
 
-/// رجیستری بانک‌های پشتیبانی‌شده (لیست کارت‌ها دست نخورده می‌مونه)
+/// رجیستری بانک‌های پشتیبانی‌شده
 class SmsParserRegistry {
   static final List<BankSmsParser> _parsers = [
     PasargadSmsParser(),
@@ -136,6 +137,15 @@ Future<bool> importSmsForBank(String cardBankName, String body) async {
 
   final sms = parser.parse(body);
   if (sms == null) return false;
+
+  // 🆕 لنگر موجودی: «مانده»ی جدیدترین پیامک رو نگه می‌داریم.
+  // حتی اگه تراکنشش تکراری بود هم لنگر آپدیت می‌شه.
+  final st = AppSettings.instance;
+  final ts = sms.dateTime.millisecondsSinceEpoch;
+  if (ts >= st.get<int>('sms_bal_ts', 0)) {
+    await st.set('sms_bal_ts', ts);
+    await st.set('sms_bal_rial', sms.balanceRial);
+  }
 
   final type = sms.isDeposit ? 'income' : 'expense';
   final amount = sms.amountRial.toDouble(); // ریال خام، بدون تقسیم

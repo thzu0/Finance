@@ -19,6 +19,8 @@ import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+
 class BuildHomePage extends StatefulWidget {
   const BuildHomePage({super.key, required this.size});
 
@@ -68,58 +70,60 @@ class _BuildHomePageState extends State<BuildHomePage> {
     super.dispose();
   }
 
+  /// درصد تغییر؛ اگه ماه قبل خالی بود ۰، و سقف ±۹۹۹ تا عدد منفجر نشه
+  int _pct(double cur, double prev) {
+    if (prev <= 0) return 0;
+    return (((cur - prev) / prev) * 100).round().clamp(-999, 999).toInt();
+  }
+
   Future<void> _loadAll() async {
     final now = DateTime.now();
+    final j = Jalali.fromDateTime(now);
+
     final balance = await getTotalBalance();
     final summary = await getMonthSummary(now);
     final trend = await getBalanceTrend(7); // ۷ روز اخیر
     final spending = await getExpenseByCategory(now);
+    // اول ماه شمسی (با بقیه‌ی کارت‌ها هماهنگ)
     final monthStartBalance = await getBalanceBeforeDate(
-      DateTime(now.year, now.month, 1),
+      Jalali(j.year, j.month, 1).toDateTime(),
     );
 
-    if (mounted) {
-      setState(() {
-        _balance = balance;
+    if (!mounted) return;
+    setState(() {
+      _balance = balance;
 
-        if (monthStartBalance == 0) {
-          _balanceChangePercent = 0;
-          _balanceUp = true;
-        } else {
-          final ratio = (balance - monthStartBalance) / monthStartBalance.abs();
-          _balanceChangePercent = (ratio.abs() * 100);
-          _balanceUp = ratio >= 0;
-        }
+      if (monthStartBalance <= 0) {
+        _balanceChangePercent = 0;
+        _balanceUp = balance >= monthStartBalance;
+      } else {
+        final ratio = (balance - monthStartBalance) / monthStartBalance;
+        _balanceChangePercent = (ratio.abs() * 100).clamp(0, 999).toDouble();
+        _balanceUp = ratio >= 0;
+      }
 
-        _income = summary.income;
-        _expense = summary.expense;
-        _savings = summary.savings;
+      _income = summary.income;
+      _expense = summary.expense;
+      _savings = summary.savings;
 
-        _incomePercent = summary.prevIncome == 0
-            ? 0
-            : (((summary.income - summary.prevIncome) / summary.prevIncome) *
-                      100)
-                  .round();
-        _incomeUp = summary.income >= summary.prevIncome;
+      _incomePercent = _pct(summary.income, summary.prevIncome);
+      _incomeUp = summary.income >= summary.prevIncome;
 
-        _expensePercent = summary.prevExpense == 0
-            ? 0
-            : (((summary.expense - summary.prevExpense) / summary.prevExpense) *
-                      100)
-                  .round();
-        _expenseUp = summary.expense <= summary.prevExpense;
+      _expensePercent = _pct(summary.expense, summary.prevExpense);
+      _expenseUp = summary.expense <= summary.prevExpense;
 
-        _savingsPercent = summary.income == 0
-            ? 0
-            : ((summary.savings / summary.income) * 100).round();
-        _savingsUp = summary.savings >= 0;
+      _savingsPercent = summary.income == 0
+          ? 0
+          : ((summary.savings / summary.income) * 100)
+                .round()
+                .clamp(-999, 999)
+                .toInt();
+      _savingsUp = summary.savings >= 0;
 
-        _loading = false;
-
-        _trend = trend;
-        _spendingCategories = spending;
-      });
-    }
+      _trend = trend;
+      _spendingCategories = spending;
+      _loading = false;
+    });
   }
 
   @override

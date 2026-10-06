@@ -9,6 +9,7 @@ import 'package:finance/sms/bank_sms_parser.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:finance/database/transaction_repository.dart';
 
 const _font = 'Vazirmatn';
 const _ok = Color(0xFF34D399);
@@ -252,8 +253,10 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     if (!ok || !mounted) return;
 
     await _cardService.deleteCard();
-    // بدون کارت، خوندن پیامک هم باید خاموش بشه (قبلاً فقط UI خاموش می‌شد)
+    // بدون کارت، خوندن پیامک هم باید خاموش بشه
     if (_smsEnabled) await SmsPermissionService.disable();
+    // 🆕 لنگر موجودی کارت قبلی نمونه
+    await resetBalanceAnchor();
     if (!mounted) return;
 
     _hasSaved = false;
@@ -281,6 +284,8 @@ class _CreditCardScreenState extends State<CreditCardScreen>
 
   Future<void> _toggleSmsParsing(bool enable) async {
     if (!enable) {
+      // 🆕 قبل از disable: موجودی فعلی رو قفل کن تا بعد از خاموش شدن همون بمونه
+      await freezeBalanceOffset();
       await SmsPermissionService.disable();
       if (!mounted) return;
       setState(() => _smsEnabled = false);
@@ -309,7 +314,6 @@ class _CreditCardScreenState extends State<CreditCardScreen>
           context,
           n > 0 ? '$n تراکنش جدید ثبت شد' : 'خواندن خودکار پیامک فعال شد',
         );
-
         break;
       case SmsPermissionResult.denied:
         setState(() => _smsEnabled = false);
