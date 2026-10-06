@@ -6,15 +6,18 @@ import 'package:timezone/timezone.dart' as tz;
 
 class LocalPushService {
   LocalPushService._();
+
   static final LocalPushService instance = LocalPushService._();
 
-  final _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+
   bool _initialized = false;
 
   // ── کانال Android ──
-  static const _channelId = 'finance_app_channel';
-  static const _channelName = 'اعلان‌های مالی';
-  static const _channelDesc = 'یادآورها، هشدار بودجه و گزارش‌ها';
+  static const String _channelId = 'finance_app_channel';
+  static const String _channelName = 'اعلان‌های مالی';
+  static const String _channelDesc = 'یادآورها، هشدار بودجه و گزارش‌ها';
 
   // ── شناسه‌های ثابت ──
   static const int idDailyReminder = 100;
@@ -35,8 +38,10 @@ class LocalPushService {
 
     // ── timezone ──
     tz.initializeTimeZones();
+
     try {
       final info = await FlutterTimezone.getLocalTimezone();
+
       tz.setLocalLocation(tz.getLocation(info.identifier));
     } catch (_) {
       tz.setLocalLocation(tz.getLocation('Asia/Tehran'));
@@ -46,6 +51,7 @@ class LocalPushService {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
+
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -53,7 +59,10 @@ class LocalPushService {
     );
 
     await _plugin.initialize(
-      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+      settings: const InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      ),
       onDidReceiveNotificationResponse: _onTap,
       onDidReceiveBackgroundNotificationResponse: _onBackgroundTap,
     );
@@ -63,6 +72,7 @@ class LocalPushService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
+
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,
@@ -72,13 +82,15 @@ class LocalPushService {
       ),
     );
 
-    // ── مجوزها ──
+    // ── مجوز Android ──
     await androidPlugin?.requestNotificationsPermission();
 
+    // ── مجوز iOS ──
     final iosPlugin = _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >();
+
     await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
 
     _initialized = true;
@@ -93,7 +105,13 @@ class LocalPushService {
     required String body,
     required String payload,
   }) async {
-    await _plugin.show(id, title, body, _details(), payload: payload);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: _details(),
+      payload: payload,
+    );
   }
 
   // ─────────────────────────────────────────
@@ -110,6 +128,7 @@ class LocalPushService {
     await _cancel(id);
 
     final now = tz.TZDateTime.now(tz.local);
+
     var scheduled = tz.TZDateTime(
       tz.local,
       now.year,
@@ -118,16 +137,17 @@ class LocalPushService {
       hour,
       minute,
     );
+
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      _details(),
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduled,
+      notificationDetails: _details(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: payload,
@@ -149,6 +169,7 @@ class LocalPushService {
     await _cancel(id);
 
     final now = tz.TZDateTime.now(tz.local);
+
     var scheduled = tz.TZDateTime(
       tz.local,
       now.year,
@@ -157,16 +178,17 @@ class LocalPushService {
       hour,
       minute,
     );
+
     while (scheduled.weekday != dayOfWeek || scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      _details(),
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduled,
+      notificationDetails: _details(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       payload: payload,
@@ -188,6 +210,7 @@ class LocalPushService {
     await _cancel(id);
 
     final now = tz.TZDateTime.now(tz.local);
+
     var scheduled = tz.TZDateTime(
       tz.local,
       now.year,
@@ -196,6 +219,7 @@ class LocalPushService {
       hour,
       minute,
     );
+
     if (scheduled.isBefore(now)) {
       scheduled = tz.TZDateTime(
         tz.local,
@@ -208,11 +232,11 @@ class LocalPushService {
     }
 
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      _details(),
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduled,
+      notificationDetails: _details(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
       payload: payload,
@@ -223,8 +247,10 @@ class LocalPushService {
   // لغو
   // ─────────────────────────────────────────
   Future<void> cancel(int id) => _cancel(id);
+
   Future<void> cancelAll() => _plugin.cancelAll();
-  Future<void> _cancel(int id) => _plugin.cancel(id);
+
+  Future<void> _cancel(int id) => _plugin.cancel(id: id);
 
   // ─────────────────────────────────────────
   // جزئیات نمایش
