@@ -15,6 +15,9 @@ class SmsSyncService {
   /// اسم فرستنده‌های هر بانک (طبق چیزی که توی اینباکس گوشی دیده می‌شه)
   static const Map<String, List<String>> _sendersByBank = {
     'پاسارگاد': ['B.Pasargad', 'Pasargad'],
+    'رسالت': ['ResalatBank', 'Resalat'],
+    'مسکن': ['BankMaskan'],
+    'بلو': ['+98 999 998 7641', '9999987641', 'Blu'],
     // بانک جدید: اسم فرستنده‌اش رو اینجا اضافه کن
   };
 
