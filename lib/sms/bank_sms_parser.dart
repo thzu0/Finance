@@ -145,6 +145,63 @@ class ResalatSmsParser extends _SignAccountBalanceParser {
   List<String> get nameKeywords => ['رسالت', 'resalat'];
 }
 
+/// قرض‌الحسنه مهر ایران:
+/// ‪300463586351‬
+/// 1,900,000-
+/// 1405/7/14-16:18
+/// مانده:30,724,805
+///
+/// نکته: علامت (+/-) بعد از مبلغ میاد، نه قبلش. و تاریخ سال کامل داره.
+class QmIranSmsParser extends BankSmsParser {
+  @override
+  String get bankName => 'مهر ایران';
+
+  @override
+  List<String> get nameKeywords => [
+    'مهر ایران',
+    'QMEHRIRAN',
+    'qmehriran',
+    'mehriran',
+  ];
+
+  // علامت‌های کنترلی جهت‌دهی متن (LTR/RTL embedding, marks و...)
+  static const _lrm = r'[\s\u200e\u200f\u202a\u202b\u202c]*';
+
+  static final _re = RegExp(
+    r'(?<acc>\d+)'
+    '$_lrm'
+    r'\s*\n\s*'
+    r'(?<amt>[\d,]+)(?<sign>[+-])\s*\n\s*'
+    r'(?<y>\d{4})/(?<mo>\d{1,2})/(?<d>\d{1,2})'
+    r'-(?<h>\d{1,2}):(?<mi>\d{2})\s*\n\s*'
+    r'مانده[:\s]*(?<bal>[\d,]+)',
+  );
+
+  @override
+  ParsedSms? parse(String body) {
+    final m = _re.firstMatch(normalizeSmsDigits(body));
+    if (m == null) return null;
+    try {
+      final dt = _jalaliFull(
+        int.parse(m.namedGroup('y')!),
+        int.parse(m.namedGroup('mo')!),
+        int.parse(m.namedGroup('d')!),
+        int.parse(m.namedGroup('h')!),
+        int.parse(m.namedGroup('mi')!),
+      );
+      return ParsedSms(
+        accountNo: m.namedGroup('acc')!,
+        isDeposit: m.namedGroup('sign') == '+',
+        amountRial: _toInt(m.namedGroup('amt')!),
+        balanceRial: _toInt(m.namedGroup('bal')!),
+        dateTime: dt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 /// مسکن:
 /// انتقال:‎-10,000,000‎
 /// حساب:710178492595
@@ -255,6 +312,7 @@ class SmsParserRegistry {
   static final List<BankSmsParser> _parsers = [
     PasargadSmsParser(),
     ResalatSmsParser(),
+    QmIranSmsParser(),
     MaskanSmsParser(),
     BluSmsParser(),
     // بانک جدید = فقط یک کلاس جدید اینجا
