@@ -67,10 +67,10 @@ flutter:
 
 # ⬇️ این بلاک جدید برای آیکون اپ
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: "ic_launcher"                         # ← این رو عوض کن به ic_launcher
   ios: true
-  image_path: "assets/icon/noxa_logo.png"
+  image_path: "assets/icon/noxa_icon.png"
   min_sdk_android: 21
   remove_alpha_ios: true
-  adaptive_icon_background: "#0A1A3A"
-  adaptive_icon_foreground: "assets/icon/noxa_logo.png"
+  adaptive_icon_background: "#0E1B3D"
+  adaptive_icon_foreground: "assets/icon/noxa_icon.png"

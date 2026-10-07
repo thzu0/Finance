@@ -303,6 +303,293 @@ class BluSmsParser extends BankSmsParser {
   }
 }
 
+/// ─────────────────────────────────────────────────────────────
+/// بانک شهر
+/// ─────────────────────────────────────────────────────────────
+///
+/// **فرمت اصلی** (پرداخت قسط، واریز گروهی، انتقال وجه کارتی، خرید با کارت):
+/// ```
+/// *بانک شهر*
+/// پرداخت قسط
+/// برداشت از:700794605751
+/// مبلغ:63,740,000ريال
+/// موجودی:605,840,156 ریال
+/// 1405/07/5 13:03:18
+/// ```
+///
+/// نکته‌ها:
+/// - «خريد» و «کارتي» با ي عربی نوشته می‌شن
+/// - فرمت تاریخ: `YYYY/MM/D  HH:MM:SS` (روز ممکنه 1 یا 2 رقمی)
+/// - پیام‌های «انتقال به ... رمز ...» پارس نمی‌شن (تراکنش نیستن، فقط OTP)
+class ShahrSmsParser extends BankSmsParser {
+  @override
+  String get bankName => 'شهر';
+
+  @override
+  List<String> get nameKeywords => [
+    'شهر',
+    'shahr',
+    'Shahr',
+    'SHAHR',
+    'ShahrBank',
+    'shahrbank',
+  ];
+
+  static const _mark = r'[\u200e\u200f\u202a\u202b\u202c]*';
+
+  /// الگوی اصلی — همه فرمت‌ها به جز OTP
+  static final _re = RegExp(
+    r'\*?بانک\s*شهر\*?\s*\n\s*'
+            r'(?<type>[^\n]+)\n\s*'
+            r'(?:برداشت\s*از|واریز\s*به)\s*:\s*' +
+        _mark +
+        r'(?<acc>\d+)[^\n]*\n\s*'
+            r'مبلغ\s*:\s*' +
+        _mark +
+        r'(?<amt>[\d,]+)\s*ریال[^\n]*\n\s*'
+            r'موجودی\s*:\s*' +
+        _mark +
+        r'(?<bal>[\d,]+)\s*ریال[^\n]*\n\s*'
+            r'(?<y>\d{4})/(?<mo>\d{1,2})/(?<d>\d{1,2})\s+'
+            r'(?<h>\d{1,2}):(?<mi>\d{2}):(?<s>\d{2})',
+  );
+
+  @override
+  ParsedSms? parse(String body) {
+    // یکسان‌سازی ارقام + حروف عربی
+    final text = normalizeSmsDigits(
+      body,
+    ).replaceAll('ي', 'ی').replaceAll('ك', 'ک');
+
+    final m = _re.firstMatch(text);
+    if (m == null) return null;
+
+    try {
+      final type = m.namedGroup('type')!.trim();
+
+      // تشخیص درآمد / هزینه از روی نوع خط دوم:
+      //  - واریز → درآمد
+      //  - پرداخت قسط / انتقال وجه کارتی / خرید با کارت → هزینه
+      final isDeposit = type.contains('واریز');
+
+      final dt = _jalaliFull(
+        int.parse(m.namedGroup('y')!),
+        int.parse(m.namedGroup('mo')!),
+        int.parse(m.namedGroup('d')!),
+        int.parse(m.namedGroup('h')!),
+        int.parse(m.namedGroup('mi')!),
+      );
+
+      return ParsedSms(
+        accountNo: m.namedGroup('acc')!,
+        isDeposit: isDeposit,
+        amountRial: _toInt(m.namedGroup('amt')!),
+        balanceRial: _toInt(m.namedGroup('bal')!),
+        dateTime: dt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// ─────────────────────────────────────────────────────────────
+/// بانک سپه — سه فرمت متفاوت داره:
+/// ─────────────────────────────────────────────────────────────
+///
+/// **فرمت A: برداشت / خرید پایانه فروش**
+/// ```
+/// برداشت:50,025,000
+/// حساب :‪16300500096657‬
+/// مانده:240,484,870
+/// 6/24-18:02
+/// ```
+/// انواع: برداشت، خريد پايانه فروش، دريافت اتوماتيک قسط
+///
+/// **فرمت B: واریز سود** (سال کامل + ساعت)
+/// ```
+/// واريز سود به: 16300500096657
+/// مبلغ: 205,543ريال
+/// زمان: 1405/7/9-2:31
+/// مانده: 286,066,333ريال
+/// ```
+///
+/// **فرمت C: پرداخت گروهی / واریز گروهی** (بدون ساعت)
+/// ```
+/// پرداخت گروهي
+/// حساب:‪1056301495509‬
+/// مبلغ:12,000,000
+/// مانده:16,247,345
+/// زمان:1405/6/30
+/// ```
+///
+/// **پیام‌های انتقال با رمز (OTP)** پارس نمی‌شن چون:
+/// - مانده ندارن
+/// - تاریخ تراکنش ندارن (فقط «اعتبار رمز»)
+class SepahSmsParser extends BankSmsParser {
+  @override
+  String get bankName => 'سپه';
+
+  @override
+  List<String> get nameKeywords => [
+    'سپه',
+    'sepah',
+    'SEPAH',
+    'SEPAHBANK',
+    'sphbank',
+    'ebank.sphbank',
+  ];
+
+  // علامت‌های کنترلی جهت‌دهی متن (بدون \s)
+  static const _mark = r'[\u200e\u200f\u202a\u202b\u202c]*';
+
+  // ──────── الگوی A: <type>:<amount> + حساب + مانده + تاریخ بدون سال ────────
+  static final _reA = RegExp(
+    r'(?<type>[^\n:]+):\s*(?<amt>[\d,]+)[^\n]*\n\s*'
+            r'حساب\s*:\s*' +
+        _mark +
+        r'(?<acc>\d+)[^\n]*\n\s*'
+            r'مانده\s*:\s*' +
+        _mark +
+        r'(?<bal>[\d,]+)[^\n]*\n\s*'
+            r'(?<mo>\d{1,2})/(?<d>\d{1,2})-(?<h>\d{1,2}):(?<mi>\d{2})',
+  );
+
+  // ──────── الگوی B: واریز سود به + مبلغ + زمان (سال کامل) + مانده ────────
+  static final _reB = RegExp(
+    r'واریز سود به\s*:\s*' +
+        _mark +
+        r'(?<acc>\d+)[^\n]*\n\s*'
+            r'مبلغ\s*:\s*' +
+        _mark +
+        r'(?<amt>[\d,]+)[^\n]*\n\s*'
+            r'زمان\s*:\s*' +
+        _mark +
+        r'(?<y>\d{4})/(?<mo>\d{1,2})/(?<d>\d{1,2})-(?<h>\d{1,2}):(?<mi>\d{2})[^\n]*\n\s*'
+            r'مانده\s*:\s*' +
+        _mark +
+        r'(?<bal>[\d,]+)',
+  );
+
+  // ──────── الگوی C: پرداخت/واریز گروهی + حساب + مبلغ + مانده + زمان (بدون ساعت) ────────
+  static final _reC = RegExp(
+    r'(?<type>(?:پرداخت|واریز)\s+گروهی)[^\n]*\n\s*'
+            r'حساب\s*:\s*' +
+        _mark +
+        r'(?<acc>\d+)[^\n]*\n\s*'
+            r'مبلغ\s*:\s*' +
+        _mark +
+        r'(?<amt>[\d,]+)[^\n]*\n\s*'
+            r'مانده\s*:\s*' +
+        _mark +
+        r'(?<bal>[\d,]+)[^\n]*\n\s*'
+            r'زمان\s*:\s*' +
+        _mark +
+        r'(?<y>\d{4})/(?<mo>\d{1,2})/(?<d>\d{1,2})',
+  );
+
+  @override
+  ParsedSms? parse(String body) {
+    // یکسان‌سازی: ارقام + ی/ک عربی
+    final text = normalizeSmsDigits(
+      body,
+    ).replaceAll('ي', 'ی').replaceAll('ك', 'ک');
+
+    return _tryB(text) ?? _tryC(text) ?? _tryA(text, body);
+  }
+
+  // ──────────── الگوی B: واریز سود ────────────
+  ParsedSms? _tryB(String text) {
+    final m = _reB.firstMatch(text);
+    if (m == null) return null;
+    try {
+      final dt = _jalaliFull(
+        int.parse(m.namedGroup('y')!),
+        int.parse(m.namedGroup('mo')!),
+        int.parse(m.namedGroup('d')!),
+        int.parse(m.namedGroup('h')!),
+        int.parse(m.namedGroup('mi')!),
+      );
+      return ParsedSms(
+        accountNo: m.namedGroup('acc')!,
+        isDeposit: true, // واریز سود = درآمد
+        amountRial: _toInt(m.namedGroup('amt')!),
+        balanceRial: _toInt(m.namedGroup('bal')!),
+        dateTime: dt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ──────────── الگوی C: پرداخت / واریز گروهی ────────────
+  ParsedSms? _tryC(String text) {
+    final m = _reC.firstMatch(text);
+    if (m == null) return null;
+    try {
+      final type = m.namedGroup('type')!;
+
+      // تشخیص درآمد/هزینه:
+      //  - "واریز گروهی" → درآمد
+      //  - "پرداخت گروهی" → معمولاً هزینه،
+      //    ولی اگه متن حاوی «یارانه» باشه (یارانه‌ی政府) درآمده
+      bool isDeposit = type.contains('واریز');
+      if (!isDeposit && type.contains('پرداخت') && (text.contains('یارانه'))) {
+        isDeposit = true;
+      }
+
+      // این الگو ساعت نداره → 00:00
+      final dt = _jalaliFull(
+        int.parse(m.namedGroup('y')!),
+        int.parse(m.namedGroup('mo')!),
+        int.parse(m.namedGroup('d')!),
+        0,
+        0,
+      );
+      return ParsedSms(
+        accountNo: m.namedGroup('acc')!,
+        isDeposit: isDeposit,
+        amountRial: _toInt(m.namedGroup('amt')!),
+        balanceRial: _toInt(m.namedGroup('bal')!),
+        dateTime: dt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ──────────── الگوی A: برداشت / خرید / دریافت قسط ────────────
+  ParsedSms? _tryA(String text, String originalBody) {
+    final m = _reA.firstMatch(text);
+    if (m == null) return null;
+    try {
+      final type = m.namedGroup('type')!.trim();
+
+      // جهت تراکنش از روی نوع خط دوم:
+      //  - برداشت / خرید پایانه فروش → هزینه
+      //  - دریافت (به‌ندرت اینجا میاد) → درآمد
+      //  - واریز → درآمد
+      final isDeposit = type.contains('واریز') || type.contains('دریافت');
+
+      final dt = _jalaliNoYear(
+        int.parse(m.namedGroup('mo')!),
+        int.parse(m.namedGroup('d')!),
+        int.parse(m.namedGroup('h')!),
+        int.parse(m.namedGroup('mi')!),
+      );
+      return ParsedSms(
+        accountNo: m.namedGroup('acc')!,
+        isDeposit: isDeposit,
+        amountRial: _toInt(m.namedGroup('amt')!),
+        balanceRial: _toInt(m.namedGroup('bal')!),
+        dateTime: dt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // رجیستری
 // ═══════════════════════════════════════════════════════════════
@@ -315,6 +602,8 @@ class SmsParserRegistry {
     QmIranSmsParser(),
     MaskanSmsParser(),
     BluSmsParser(),
+    SepahSmsParser(),
+    ShahrSmsParser(),
     // بانک جدید = فقط یک کلاس جدید اینجا
   ];
 

@@ -19,6 +19,8 @@ class SmsSyncService {
     'مهر ایران': ['B.QMEHRIRAN', 'QMEHRIRAN'],
     'مسکن': ['BankMaskan'],
     'بلو': ['+98 999 998 7641', '9999987641', 'Blu'],
+    'سپه': ['SEPAHBANK', 'BankSepah', 'Sepah', 'SEPAH'],
+    'شهر': ['BankShahr', 'B.SHAHR', 'Shahr', 'SHAHR'],
     // بانک جدید: اسم فرستنده‌اش رو اینجا اضافه کن
   };
 

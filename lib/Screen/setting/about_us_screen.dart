@@ -18,13 +18,13 @@ class Aboutscreen extends StatelessWidget {
       title: 'درباره‌ی ما',
       children: [
         const SizedBox(height: 8),
-        // لوگو
+
         // لوگو
         Center(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: Image.asset(
-              'assets/icon/noxa_logo.png',
+              'assets/icon/noxa_icon.png',
               height: 96,
               width: 96,
               fit: BoxFit.cover,
