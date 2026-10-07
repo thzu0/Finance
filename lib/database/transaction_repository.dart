@@ -5,6 +5,7 @@ import 'package:finance/widget/spending_donut_chart.dart';
 import 'app_database.dart';
 import 'database_provider.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import 'package:finance/services/budget_alert_service.dart';
 
 /// یه تراکنش جدید (هزینه یا درآمد) به دیتابیس اضافه می‌کنه.
 Future<int> addTransaction({
@@ -28,6 +29,11 @@ Future<int> addTransaction({
 
   // به همه‌ی صفحه‌هایی که دیتا نشون میدن خبر میده رفرش بشن
   transactionsTicker.value++;
+
+  // هشدار بودجه، فقط برای هزینه‌ها
+  if (type == 'expense') {
+    await BudgetAlertService.check(categoryId: categoryId);
+  }
 
   return id;
 }
