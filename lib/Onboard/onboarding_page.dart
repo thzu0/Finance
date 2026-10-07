@@ -1,5 +1,5 @@
 import 'package:finance/Constans/constans.dart';
-
+import 'package:finance/services/prefs_service.dart';
 import 'package:finance/Screen/root.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
@@ -16,6 +16,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
   int currentIndex = 0;
 
   ///============================================
+  /// FINISH ONBOARDING
+  ///============================================
+  Future<void> _finishOnboarding() async {
+    // ذخیره کن که کاربر دیده
+    await PrefsService.setOnboardingSeen();
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      PageTransition(child: const RootPage(), type: PageTransitionType.fade),
+    );
+  }
+
+  ///============================================
   /// CREATE INDICATORS
   ///============================================
   Widget _indicators(bool isActive) {
@@ -25,7 +40,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       width: isActive ? 20.0 : 8.0,
       margin: const EdgeInsets.only(right: 5.0),
       decoration: BoxDecoration(
-        color: isActive ? Color(0xFF4682FF) : Color(0xFF263A70),
+        color: isActive ? const Color(0xFF4682FF) : const Color(0xFF263A70),
         borderRadius: BorderRadius.circular(5.0),
       ),
     );
@@ -58,15 +73,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Padding(
             padding: const EdgeInsets.only(right: 10.0),
             child: TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  PageTransition(
-                    child: const RootPage(),
-                    type: PageTransitionType.fade,
-                  ),
-                );
-              },
+              onPressed: _finishOnboarding,
               child: const Text(
                 'رد کردن ',
                 style: TextStyle(
@@ -125,32 +132,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
             bottom: 90.0,
             right: 40.0,
             child: Container(
-              padding: EdgeInsets.all(4),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Color(0xFF4682FF),
               ),
               child: IconButton(
                 onPressed: () {
-                  setState(() {
-                    if (currentIndex < 3) {
-                      currentIndex++;
-                      if (currentIndex < 4) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeIn,
-                        );
-                      }
-                    } else {
-                      Navigator.pushReplacement(
-                        context,
-                        PageTransition(
-                          type: PageTransitionType.fade,
-                          child: const RootPage(),
-                        ),
-                      );
-                    }
-                  });
+                  if (currentIndex < 3) {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeIn,
+                    );
+                  } else {
+                    _finishOnboarding();
+                  }
                 },
                 icon: const Icon(
                   Icons.arrow_forward_ios,
@@ -168,7 +164,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
 ///============================================
 /// CREATE PAGE ONBOARD
 ///============================================
-
 class CreatePage extends StatelessWidget {
   final String image;
   final String title;
@@ -206,18 +201,18 @@ class CreatePage extends StatelessWidget {
               color: Constans.textPrimary,
             ),
           ),
-          SizedBox(height: 20.0),
+          const SizedBox(height: 20.0),
           Text(
             textAlign: TextAlign.center,
             description,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Vazirmatn',
               fontSize: 21.0,
               fontWeight: FontWeight.w400,
               color: Colors.grey,
             ),
           ),
-          SizedBox(height: 20.0),
+          const SizedBox(height: 20.0),
         ],
       ),
     );

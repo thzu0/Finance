@@ -1,10 +1,12 @@
 import 'package:finance/Onboard/onboarding_page.dart';
+import 'package:finance/Screen/root.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/seed_categories.dart';
 import 'package:finance/security/app_lock_gate.dart';
 import 'package:finance/services/background_worker.dart';
 import 'package:finance/services/local_push_service.dart';
 import 'package:finance/services/notification_scheduler.dart';
+import 'package:finance/services/prefs_service.dart';
 import 'package:finance/services/sms_sync_service.dart';
 
 import 'package:flutter/material.dart';
@@ -31,11 +33,16 @@ void main() async {
 
   await NotificationScheduler.instance.syncAll();
 
-  runApp(const MyApp());
+  // ⬇️ چک کن کاربر قبلاً onboarding رو دیده یا نه
+  final hasSeenOnboarding = await PrefsService.hasSeenOnboarding();
+
+  runApp(MyApp(showOnboarding: !hasSeenOnboarding));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final bool showOnboarding;
+
+  const MyApp({super.key, this.showOnboarding = true});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -85,7 +92,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ).textTheme.apply(displayColor: Colors.white),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const OnboardingPage(),
+      home: widget.showOnboarding ? const OnboardingPage() : const RootPage(),
     );
   }
 }
