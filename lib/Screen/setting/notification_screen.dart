@@ -145,12 +145,11 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                     GlassSwitchTile(
                       icon: Icons.warning_amber_rounded,
                       title: 'هشدار بودجه',
-                      subtitle: 'وقتی به ۸۰٪ سقف یه دسته رسیدی',
+                      subtitle: 'وقتی به ۸۰٪ یا ۱۰۰٪ سقف بودجه برسی',
                       value: _budgetAlert,
                       onChanged: (v) async {
                         setState(() => _budgetAlert = v);
                         await _s.set('notif_budget_alert', v);
-                        // 🆕 (اختیاری — چک بودجه توسط Workmanager هر ۱۵ دقیقه اجرا می‌شه)
                       },
                     ),
                     GlassSwitchTile(
@@ -161,6 +160,7 @@ class _NotificationsscreenState extends State<Notificationsscreen> {
                       onChanged: (v) async {
                         setState(() => _tips = v);
                         await _s.set('notif_tips', v);
+                        await NotificationScheduler.instance.syncTips(); // 🆕
                       },
                     ),
                   ],

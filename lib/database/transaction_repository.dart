@@ -229,6 +229,35 @@ Future<MonthSummary> getMonthSummary(DateTime reference) async {
   );
 }
 
+// ─────────────────────────────────────────────
+// 🆕 خلاصه‌ی هفته (شنبه تا جمعه) + هفته‌ی قبل
+// ─────────────────────────────────────────────
+class WeekSummary {
+  final double expense;
+  final double prevExpense;
+  WeekSummary({required this.expense, required this.prevExpense});
+}
+
+Future<WeekSummary> getWeekSummary() async {
+  final now = DateTime.now();
+
+  // آخرین شنبه‌ی قبل یا مساوی امروز
+  var lastSaturday = DateTime(now.year, now.month, now.day);
+  while (lastSaturday.weekday != DateTime.saturday) {
+    lastSaturday = lastSaturday.subtract(const Duration(days: 1));
+  }
+
+  // هفته‌ی گذشته‌ی کامل: از شنبه‌ی هفته‌ی قبل تا شنبه‌ی همین هفته
+  final endExclusive = lastSaturday;
+  final startOfWeek = endExclusive.subtract(const Duration(days: 7));
+  final prevStart = startOfWeek.subtract(const Duration(days: 7));
+
+  final expense = await _sumByType('expense', startOfWeek, endExclusive);
+  final prevExpense = await _sumByType('expense', prevStart, startOfWeek);
+
+  return WeekSummary(expense: expense, prevExpense: prevExpense);
+}
+
 class TrendPoint {
   final DateTime date;
   final double balance;

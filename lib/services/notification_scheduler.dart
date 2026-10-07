@@ -4,6 +4,12 @@ import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/services/local_push_service.dart';
 import 'package:finance/services/notification_service.dart' as db;
+import 'package:finance/database/transaction_repository.dart';
+
+import 'package:finance/extentions/extentions.dart';
+
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import 'package:finance/services/smart_suggestion_service.dart';
 
 class NotificationScheduler {
   NotificationScheduler._();
@@ -73,9 +79,12 @@ class NotificationScheduler {
 
     if (existing.isNotEmpty) return;
 
+    // 🆕 متن واقعی رو حساب کن
+    final t = await _buildWeeklyText();
+
     await db.NotificationService.create(
-      title: 'گزارش هفتگی',
-      body: 'این هفته چقدر خرج کردی؟ ببین',
+      title: t.title,
+      body: t.body,
       type: 'weekly',
     );
   }
@@ -101,9 +110,12 @@ class NotificationScheduler {
 
     if (existing.isNotEmpty) return;
 
+    // 🆕 متن واقعی رو حساب کن
+    final t = await _buildMonthlyText();
+
     await db.NotificationService.create(
-      title: 'خلاصه‌ی ماهانه',
-      body: 'مرور خرج و درآمد ماه گذشته‌ت آماده‌ست',
+      title: t.title,
+      body: t.body,
       type: 'monthly',
     );
   }
@@ -113,6 +125,110 @@ class NotificationScheduler {
     await syncMissedDailyReminder();
     await syncMissedWeeklyReport();
     await syncMissedMonthlyReport();
+    await syncMissedTips(); // 🆕
+  }
+
+  // ─────────────────────────────────────────
+  // فرمت پول: ۲.۳ میلیون تومان / ۲۵۰ هزار تومان / ۵۰۰ تومان
+  // ─────────────────────────────────────────
+  String _money(double amount) {
+    if (amount <= 0) return '۰ تومان';
+    if (amount >= 1000000) {
+      final m = (amount / 1000000).toStringAsFixed(1);
+      return '${m.farsiNumber} میلیون تومان';
+    }
+    if (amount >= 1000) {
+      final k = (amount / 1000).toStringAsFixed(0);
+      return '${k.farsiNumber} هزار تومان';
+    }
+    return '${amount.toStringAsFixed(0).farsiNumber} تومان';
+  }
+
+  // ─────────────────────────────────────────
+  // متن پویا برای گزارش هفتگی
+  // ─────────────────────────────────────────
+  Future<({String title, String body})> _buildWeeklyText() async {
+    final w = await getWeekSummary();
+
+    if (w.expense == 0) {
+      return (title: 'گزارش هفتگی', body: 'هفته‌ی قبل خرجی ثبت نکردی');
+    }
+
+    if (w.prevExpense == 0) {
+      return (
+        title: 'گزارش هفتگی',
+        body: 'هفته‌ی قبل ${_money(w.expense)} خرج کردی',
+      );
+    }
+
+    final change = ((w.expense - w.prevExpense) / w.prevExpense) * 100;
+
+    if (change <= -5) {
+      final pct = change.abs().toStringAsFixed(0).farsiNumber;
+      return (
+        title: 'گزارش هفتگی',
+        body:
+            'هفته‌ی قبل ${_money(w.expense)} خرج کردی، $pct٪ کمتر از هفته‌ی قبل‌تر',
+      );
+    }
+
+    if (change >= 10) {
+      final pct = change.abs().toStringAsFixed(0).farsiNumber;
+      return (
+        title: 'گزارش هفتگی',
+        body:
+            'هفته‌ی قبل ${_money(w.expense)} خرج کردی، $pct٪ بیشتر از هفته‌ی قبل‌تر',
+      );
+    }
+
+    return (
+      title: 'گزارش هفتگی',
+      body:
+          'هفته‌ی قبل ${_money(w.expense)} خرج کردی، تقریباً مثل هفته‌ی قبل‌تر',
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // متن پویا برای خلاصه‌ی ماهانه
+  // ─────────────────────────────────────────
+  Future<({String title, String body})> _buildMonthlyText() async {
+    // ماه گذشته‌ی شمسی نسبت به امروز
+    final now = DateTime.now();
+    final j = Jalali.fromDateTime(now);
+    final prevRef = j.month == 1
+        ? Jalali(j.year - 1, 12, 15).toDateTime()
+        : Jalali(j.year, j.month - 1, 15).toDateTime();
+
+    final s = await getMonthSummary(prevRef);
+
+    if (s.income == 0 && s.expense == 0) {
+      return (title: 'خلاصه‌ی ماهانه', body: 'ماه گذشته تراکنشی ثبت نکردی');
+    }
+
+    final savings = s.income - s.expense;
+    final exp = _money(s.expense);
+    final inc = _money(s.income);
+
+    if (savings > 0) {
+      return (
+        title: 'خلاصه‌ی ماهانه',
+        body:
+            'ماه گذشته $exp خرج و $inc درآمد داشتی، ${_money(savings)} پس‌انداز',
+      );
+    }
+
+    if (savings < 0) {
+      return (
+        title: 'خلاصه‌ی ماهانه',
+        body:
+            'ماه گذشته $exp خرج و $inc درآمد داشتی، ${_money(savings.abs())} کسری',
+      );
+    }
+
+    return (
+      title: 'خلاصه‌ی ماهانه',
+      body: 'ماه گذشته $exp خرج و $inc درآمد داشتی، دقیقاً سر به سر',
+    );
   }
 
   // ═══════════════════════════════════════════
@@ -220,20 +336,19 @@ class NotificationScheduler {
     if (!_s.get<bool>('notif_enabled', true)) return;
     if (!_s.get<bool>('notif_weekly', true)) return;
 
-    const title = 'گزارش هفتگی';
-    const body = 'این هفته چقدر خرج کردی؟ ببین';
+    final t = await _buildWeeklyText();
 
     await db.NotificationService.create(
-      title: title,
-      body: body,
+      title: t.title,
+      body: t.body,
       type: 'weekly',
     );
 
     await _n.showNow(
       id: LocalPushService.idWeeklyReport,
-      title: title,
-      body: body,
-      payload: LocalPushService.payloadWeekly,
+      title: t.title,
+      body: t.body,
+      payload: '${LocalPushService.payloadWeekly}|${t.title}|${t.body}',
     );
   }
 
@@ -265,21 +380,56 @@ class NotificationScheduler {
     if (!_s.get<bool>('notif_enabled', true)) return;
     if (!_s.get<bool>('notif_monthly', true)) return;
 
-    const title = 'خلاصه‌ی ماهانه';
-    const body = 'مرور خرج و درآمد ماه گذشته‌ت آماده‌ست';
+    final t = await _buildMonthlyText();
 
     await db.NotificationService.create(
-      title: title,
-      body: body,
+      title: t.title,
+      body: t.body,
       type: 'monthly',
     );
 
     await _n.showNow(
       id: LocalPushService.idMonthlyReport,
-      title: title,
-      body: body,
-      payload: LocalPushService.payloadMonthly,
+      title: t.title,
+      body: t.body,
+      payload: '${LocalPushService.payloadMonthly}|${t.title}|${t.body}',
     );
+  }
+
+  // ═══════════════════════════════════════════
+  // ۵) پیشنهادهای هوشمند
+  // ═══════════════════════════════════════════
+  Future<void> syncTips() async {
+    final enabled =
+        _s.get<bool>('notif_enabled', true) &&
+        _s.get<bool>('notif_tips', false);
+
+    if (!enabled) {
+      await _n.cancel(LocalPushService.idTips);
+      return;
+    }
+
+    await _n.scheduleWeekly(
+      id: LocalPushService.idTips,
+      title: 'پیشنهاد هوشمند',
+      body: 'یه نکته برای کم کردن خرج',
+      payload: LocalPushService.payloadTips,
+      dayOfWeek: DateTime.tuesday,
+      hour: 20,
+      minute: 0,
+    );
+  }
+
+  Future<void> fireTips() async {
+    if (!_s.get<bool>('notif_enabled', true)) return;
+    if (!_s.get<bool>('notif_tips', false)) return;
+    await SmartSuggestionService.sendNow();
+  }
+
+  Future<void> syncMissedTips() async {
+    if (!_s.get<bool>('notif_enabled', true)) return;
+    if (!_s.get<bool>('notif_tips', false)) return;
+    await SmartSuggestionService.sendNow();
   }
 
   // ═══════════════════════════════════════════
@@ -289,5 +439,6 @@ class NotificationScheduler {
     await syncDailyReminder();
     await syncWeeklyReport();
     await syncMonthlyReport();
+    await syncTips(); // 🆕
   }
 }

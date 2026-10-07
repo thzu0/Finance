@@ -293,28 +293,68 @@ class LocalPushService {
   }
 
   /// اطلاعات هر payload: (title, body, type)
+  /// اطلاعات هر payload: (title, body, type)
+  /// اگه payload شامل |title|body باشه، از خود payload می‌خونه
   static (String, String, String)? _payloadInfo(String? payload) {
-    switch (payload) {
+    if (payload == null) return null;
+
+    // حالت پویا: "weekly|عنوان|متن"
+    final parts = payload.split('|');
+    if (parts.length == 3) {
+      final key = parts[0];
+      final title = parts[1];
+      final body = parts[2];
+
+      final type = _typeForPayload(key);
+      if (type == null) return null;
+      return (title, body, type);
+    }
+
+    // حالت قدیمی (بدون متن)
+    final type = _typeForPayload(payload);
+    if (type == null) return null;
+    return _defaultTextFor(type);
+  }
+
+  static String? _typeForPayload(String? key) {
+    switch (key) {
       case payloadDaily:
+        return 'daily';
+      case payloadWeekly:
+        return 'weekly';
+      case payloadMonthly:
+        return 'monthly';
+      case payloadBudget:
+        return 'budget';
+      case payloadTips:
+        return 'tips';
+      default:
+        return null;
+    }
+  }
+
+  static (String, String, String) _defaultTextFor(String type) {
+    switch (type) {
+      case 'daily':
         return (
           'یادآوری ثبت تراکنش‌ها',
           'امروز چه خرج‌هایی داشتی؟ بیا ثبتشون کن',
           'daily',
         );
-      case payloadWeekly:
+      case 'weekly':
         return ('گزارش هفتگی', 'این هفته چقدر خرج کردی؟ ببین', 'weekly');
-      case payloadMonthly:
+      case 'monthly':
         return (
           'خلاصه‌ی ماهانه',
           'مرور خرج و درآمد ماه گذشته‌ت آماده‌ست',
           'monthly',
         );
-      case payloadBudget:
+      case 'budget':
         return ('هشدار بودجه', 'به سقف بودجه‌ت رسیدی', 'budget');
-      case payloadTips:
+      case 'tips':
         return ('پیشنهاد هوشمند', 'یه نکته برای کم کردن خرج', 'tips');
       default:
-        return null;
+        return ('اعلان', '', 'daily');
     }
   }
 
