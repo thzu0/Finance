@@ -9,7 +9,7 @@ class Aboutscreen extends StatelessWidget {
   const Aboutscreen({super.key});
 
   // TODO: اسم و نسخه‌ی واقعی برنامه
-  static const String _appName = 'Minty';
+  static const String _appName = 'نوکسا';
   static const String _version = '1.0.0';
 
   @override
@@ -19,15 +19,15 @@ class Aboutscreen extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         // لوگو
+        // لوگو
         Center(
-          child: GlassBox(
-            height: 96,
-            width: 96,
-            radius: 30,
-            child: const Icon(
-              Icons.diamond_outlined,
-              size: 48,
-              color: kSectionBlue,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Image.asset(
+              'assets/icon/noxa_logo.png',
+              height: 96,
+              width: 96,
+              fit: BoxFit.cover,
             ),
           ),
         ),
@@ -55,7 +55,7 @@ class Aboutscreen extends StatelessWidget {
         GlassBox(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'مینتی کمکت می‌کنه خرج و درآمدت رو ثبت کنی، برای هر دسته بودجه بذاری و ببینی پولت کجا می‌ره؛ همه‌ی اینا تو یه برنامه‌ی ساده و روان.',
+            'نوکسا کمکت می‌کنه خرج و درآمدت رو ثبت کنی، برای هر دسته بودجه بذاری و ببینی پولت کجا می‌ره؛ همه‌ی اینا تو یه برنامه‌ی ساده و روان.',
             style: glassText(15, color: Constans.textSecondary),
           ),
         ),

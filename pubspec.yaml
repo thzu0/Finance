@@ -43,12 +43,14 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.20.0
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.13.1 
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/
+    - assets/icon/
 
   fonts:
     - family: IranSans
@@ -62,3 +64,13 @@ flutter:
     - family: Vazirmatn
       fonts:
         - asset: assets/fonts/Vazirmatn-RD-Regular.ttf
+
+# ⬇️ این بلاک جدید برای آیکون اپ
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/noxa_logo.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0A1A3A"
+  adaptive_icon_foreground: "assets/icon/noxa_logo.png"
