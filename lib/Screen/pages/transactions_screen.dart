@@ -756,7 +756,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     final rows = <Widget>[
       _detailRow('دسته‌بندی', t.category),
       _detailRow('تاریخ', formatJalali(t.date)),
-      _detailRow('تاریخ', formatJalali(t.date)),
+
       _detailRow('ساعت', t.time.farsiNumber, ltr: true),
       if (last4.isNotEmpty)
         _detailRow('کارت', '•••• $last4'.farsiNumber, ltr: true),
