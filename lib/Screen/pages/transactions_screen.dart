@@ -21,6 +21,10 @@ enum _Period { all, today, week, month }
 
 enum _Sort { newest, oldest, highest, lowest }
 
+/// اسم دسته‌هایی که پیامک‌ها موقع ثبت خودکار می‌گیرن.
+/// اگه کاربر دسته رو به چیزی غیر از اینا عوض کنه، آیکون دسته نشون داده می‌شه.
+const _smsDefaultCategoryNames = {'سایر', 'سایر درآمدها'};
+
 String _periodLabel(_Period p) {
   switch (p) {
     case _Period.all:
@@ -202,9 +206,14 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
       }
 
       // آیکون و رنگ
+      // تراکنش پیامکی که دسته‌ش هنوز پیش‌فرضه، فلش واریز/برداشت داره.
+      // بعد از اینکه کاربر دسته رو عوض کرد، آیکون دسته‌ی جدید میاد.
+      final bool defaultSmsCat =
+          isSms && _smsDefaultCategoryNames.contains(c.name);
+
       final IconData icon;
       final Color iconColor;
-      if (isSms) {
+      if (defaultSmsCat) {
         icon = isIncome ? Icons.south_west_rounded : Icons.north_east_rounded;
         iconColor = isIncome ? _income : _expense;
       } else {
@@ -728,8 +737,13 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     if (i == null || !mounted || cats[i].id == t.categoryId) return;
 
     await updateTransactionCategory(t.id, cats[i].id);
+    await _loadTransactions();
     if (!mounted) return;
     showGlassSnack(context, 'دسته‌بندی تغییر کرد');
+
+    // باتم‌شیت با دسته‌ی جدید دوباره باز بشه
+    final updated = _items.where((x) => x.id == t.id).firstOrNull;
+    if (updated != null) await _openDetailSheet(updated);
   }
 
   Widget _buildDetailSheet(BuildContext ctx, _Tx t) {
@@ -740,6 +754,8 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     final balance = t.balanceAfterRial;
 
     final rows = <Widget>[
+      _detailRow('دسته‌بندی', t.category),
+      _detailRow('تاریخ', formatJalali(t.date)),
       _detailRow('تاریخ', formatJalali(t.date)),
       _detailRow('ساعت', t.time.farsiNumber, ltr: true),
       if (last4.isNotEmpty)
@@ -1395,6 +1411,10 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     final isIncome = t.type == TxType.income;
     final amountColor = isIncome ? _income : _expense;
 
+    // چیپ دسته: برای دستی‌ها همیشه، برای پیامکی‌ها فقط بعد از تغییر دسته
+    final showCategoryChip =
+        !t.isSms || !_smsDefaultCategoryNames.contains(t.category);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _openDetailSheet(t),
@@ -1435,8 +1455,8 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        // چیپ دسته — فقط برای تراکنش‌های دستی
-                        if (!t.isSms) ...[
+                        // چیپ دسته
+                        if (showCategoryChip)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -1458,21 +1478,25 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                               ),
                             ),
                           ),
-                        ],
                         // برچسب منبع پیامکی
                         if (t.isSms && t.bankName.isNotEmpty) ...[
+                          if (showCategoryChip) const SizedBox(width: 8),
                           Icon(
                             Icons.sms_outlined,
                             size: 14,
                             color: Constans.textSecondary,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            t.bankName,
-                            style: TextStyle(
-                              fontFamily: 'Lalezar',
-                              fontSize: 13,
-                              color: Constans.textSecondary,
+                          Flexible(
+                            child: Text(
+                              t.bankName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Lalezar',
+                                fontSize: 13,
+                                color: Constans.textSecondary,
+                              ),
                             ),
                           ),
                         ],
