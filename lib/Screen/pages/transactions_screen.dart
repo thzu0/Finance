@@ -5,6 +5,7 @@ import 'package:finance/Constans/icon_map.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
+import 'package:finance/database/seed_categories.dart';
 import 'package:finance/database/transaction_repository.dart';
 import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/currency_mark.dart';
@@ -13,6 +14,8 @@ import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
 enum TxType { income, expense }
+
+enum _TxAction { changeCategory, delete }
 
 enum _Period { all, today, week, month }
 
@@ -86,6 +89,10 @@ class _Tx {
   final bool isToday;
   final bool isSms;
   final String bankName;
+  final int categoryId;
+  final String? detailBank;
+  final String? accountLast4;
+  final int? balanceAfterRial;
 
   const _Tx({
     required this.id,
@@ -100,6 +107,10 @@ class _Tx {
     required this.isToday,
     required this.isSms,
     required this.bankName,
+    required this.categoryId,
+    this.detailBank,
+    this.accountLast4,
+    this.balanceAfterRial,
   });
 }
 
@@ -215,6 +226,10 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
         isToday: isToday,
         isSms: isSms,
         bankName: isSms ? note.replaceFirst('پیامک', '').trim() : '',
+        categoryId: c.id,
+        detailBank: t.bankName,
+        accountLast4: t.accountLast4,
+        balanceAfterRial: t.balanceAfterRial,
       );
     }).toList();
 
@@ -673,6 +688,292 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     }
   }
 
+  // ═════════════════════════════════════════════
+  // جزئیات تراکنش
+  // ═════════════════════════════════════════════
+  Future<void> _openDetailSheet(_Tx t) async {
+    FocusScope.of(context).unfocus();
+
+    final action = await showModalBottomSheet<_TxAction>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => _buildDetailSheet(ctx, t),
+    );
+
+    if (!mounted || action == null) return;
+    switch (action) {
+      case _TxAction.changeCategory:
+        await _changeCategory(t);
+      case _TxAction.delete:
+        await _confirmDelete(t);
+    }
+  }
+
+  Future<void> _changeCategory(_Tx t) async {
+    final isIncome = t.type == TxType.income;
+    final cats = await getCategoriesByType(isIncome ? 'income' : 'expense');
+    if (!mounted || cats.isEmpty) return;
+
+    final current = cats.indexWhere((c) => c.id == t.categoryId);
+    final i = await showGlassOptionSheet(
+      context,
+      title: isIncome ? 'انتخاب منبع درآمد' : 'انتخاب دسته',
+      options: [
+        for (final c in cats) GlassOption(iconFromName(c.icon), c.name),
+      ],
+      selected: current < 0 ? null : current,
+    );
+    if (i == null || !mounted || cats[i].id == t.categoryId) return;
+
+    await updateTransactionCategory(t.id, cats[i].id);
+    if (!mounted) return;
+    showGlassSnack(context, 'دسته‌بندی تغییر کرد');
+  }
+
+  Widget _buildDetailSheet(BuildContext ctx, _Tx t) {
+    final isIncome = t.type == TxType.income;
+    final color = isIncome ? _income : _expense;
+    final bank = t.detailBank?.trim() ?? '';
+    final last4 = t.accountLast4?.trim() ?? '';
+    final balance = t.balanceAfterRial;
+
+    final rows = <Widget>[
+      _detailRow('تاریخ', formatJalali(t.date)),
+      _detailRow('ساعت', t.time.farsiNumber, ltr: true),
+      if (last4.isNotEmpty)
+        _detailRow('کارت', '•••• $last4'.farsiNumber, ltr: true),
+      if (bank.isNotEmpty) _detailRow('بانک', bank),
+      if (balance != null)
+        _detailRow(
+          'مانده بعد از تراکنش',
+          '${balance < 0 && !amountsHidden ? '−' : ''}'
+              '${showAmount(balance.abs())} $currencyName',
+        ),
+    ];
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.82,
+            ),
+            decoration: BoxDecoration(
+              color: Constans.surface.withValues(alpha: 0.82),
+              border: Border(
+                top: BorderSide(
+                  color: Constans.border.withValues(alpha: 0.5),
+                  width: 1.2,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: t.color.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(
+                                t.icon,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            isIncome ? 'واریز' : 'برداشت',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 16,
+                              color: color,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${isIncome ? '+' : '−'}${showAmount(t.amount)}',
+                                textDirection: TextDirection.ltr,
+                                style: TextStyle(
+                                  fontFamily: 'Lalezar',
+                                  fontSize: 36,
+                                  color: color,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              CurrencyMark(
+                                color: isIncome ? 'green' : 'red',
+                                height: 30,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            t.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 20,
+                              color: Constans.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          GlassBox(
+                            child: Column(
+                              children: [
+                                for (int i = 0; i < rows.length; i++) ...[
+                                  rows[i],
+                                  if (i != rows.length - 1)
+                                    Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      indent: 16,
+                                      endIndent: 16,
+                                      color: _blue.withValues(alpha: 0.18),
+                                    ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: GestureDetector(
+                            onTap: () =>
+                                Navigator.pop(ctx, _TxAction.changeCategory),
+                            child: Container(
+                              height: 54,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF4C7DFF),
+                                    Color(0xFF7C5CFF),
+                                  ],
+                                ),
+                              ),
+                              child: const Text(
+                                'تغییر دسته‌بندی',
+                                style: TextStyle(
+                                  fontFamily: 'Lalezar',
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(ctx, _TxAction.delete),
+                            child: Container(
+                              height: 54,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _expense.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _expense.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              child: const Text(
+                                'حذف',
+                                style: TextStyle(
+                                  fontFamily: 'Lalezar',
+                                  fontSize: 18,
+                                  color: _expense,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, {bool ltr = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Lalezar',
+              fontSize: 15,
+              color: Constans.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.left,
+              textDirection: ltr ? TextDirection.ltr : TextDirection.rtl,
+              style: TextStyle(
+                fontFamily: 'Lalezar',
+                fontSize: 17,
+                color: Constans.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final todayList = _loading ? <_Tx>[] : _filtered(true);
@@ -1089,12 +1390,14 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     );
   }
 
-  // ───────────── یک ردیف تراکنش (با نگه‌داشتن = حذف) ─────────────
+  // ───────────── یک ردیف تراکنش (تپ = جزئیات، نگه‌داشتن = حذف) ─────────────
   Widget _buildTxRow(_Tx t) {
     final isIncome = t.type == TxType.income;
     final amountColor = isIncome ? _income : _expense;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openDetailSheet(t),
       onLongPress: () => _confirmDelete(t),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
