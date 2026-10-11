@@ -19,3 +19,6 @@ final ValueNotifier<int> budgetsTicker = ValueNotifier(0);
 /// هر وقت اعلان جدیدی اضافه/خونده/حذف شد، این مقدار عوض می‌شه
 /// تا صفحه‌هایی که لیست اعلان‌ها یا badge رو نشون می‌دن refresh بشن.
 final ValueNotifier<int> notificationsTicker = ValueNotifier(0);
+
+/// هر وقت لیست «پیامک‌های نخونده» عوض شد (اضافه یا پاک شد) این مقدار عوض می‌شه.
+final ValueNotifier<int> unparsedSmsTicker = ValueNotifier(0);

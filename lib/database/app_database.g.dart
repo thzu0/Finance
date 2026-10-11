@@ -1856,6 +1856,351 @@ class NotificationsCompanion extends UpdateCompanion<AppNotification> {
   }
 }
 
+class $UnparsedSmsMessagesTable extends UnparsedSmsMessages
+    with TableInfo<$UnparsedSmsMessagesTable, UnparsedSms> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UnparsedSmsMessagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _smsIdMeta = const VerificationMeta('smsId');
+  @override
+  late final GeneratedColumn<String> smsId = GeneratedColumn<String>(
+    'sms_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _senderMeta = const VerificationMeta('sender');
+  @override
+  late final GeneratedColumn<String> sender = GeneratedColumn<String>(
+    'sender',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> receivedAt = GeneratedColumn<DateTime>(
+    'received_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, smsId, sender, body, receivedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'unparsed_sms_messages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<UnparsedSms> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sms_id')) {
+      context.handle(
+        _smsIdMeta,
+        smsId.isAcceptableOrUnknown(data['sms_id']!, _smsIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_smsIdMeta);
+    }
+    if (data.containsKey('sender')) {
+      context.handle(
+        _senderMeta,
+        sender.isAcceptableOrUnknown(data['sender']!, _senderMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_senderMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  UnparsedSms map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UnparsedSms(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      smsId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sms_id'],
+      )!,
+      sender: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sender'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}received_at'],
+      )!,
+    );
+  }
+
+  @override
+  $UnparsedSmsMessagesTable createAlias(String alias) {
+    return $UnparsedSmsMessagesTable(attachedDatabase, alias);
+  }
+}
+
+class UnparsedSms extends DataClass implements Insertable<UnparsedSms> {
+  final int id;
+
+  /// همون smsId تراکنش‌ها (فرستنده + زمان + هش متن)؛ برای جلوگیری از تکرار
+  final String smsId;
+  final String sender;
+  final String body;
+  final DateTime receivedAt;
+  const UnparsedSms({
+    required this.id,
+    required this.smsId,
+    required this.sender,
+    required this.body,
+    required this.receivedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['sms_id'] = Variable<String>(smsId);
+    map['sender'] = Variable<String>(sender);
+    map['body'] = Variable<String>(body);
+    map['received_at'] = Variable<DateTime>(receivedAt);
+    return map;
+  }
+
+  UnparsedSmsMessagesCompanion toCompanion(bool nullToAbsent) {
+    return UnparsedSmsMessagesCompanion(
+      id: Value(id),
+      smsId: Value(smsId),
+      sender: Value(sender),
+      body: Value(body),
+      receivedAt: Value(receivedAt),
+    );
+  }
+
+  factory UnparsedSms.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UnparsedSms(
+      id: serializer.fromJson<int>(json['id']),
+      smsId: serializer.fromJson<String>(json['smsId']),
+      sender: serializer.fromJson<String>(json['sender']),
+      body: serializer.fromJson<String>(json['body']),
+      receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'smsId': serializer.toJson<String>(smsId),
+      'sender': serializer.toJson<String>(sender),
+      'body': serializer.toJson<String>(body),
+      'receivedAt': serializer.toJson<DateTime>(receivedAt),
+    };
+  }
+
+  UnparsedSms copyWith({
+    int? id,
+    String? smsId,
+    String? sender,
+    String? body,
+    DateTime? receivedAt,
+  }) => UnparsedSms(
+    id: id ?? this.id,
+    smsId: smsId ?? this.smsId,
+    sender: sender ?? this.sender,
+    body: body ?? this.body,
+    receivedAt: receivedAt ?? this.receivedAt,
+  );
+  UnparsedSms copyWithCompanion(UnparsedSmsMessagesCompanion data) {
+    return UnparsedSms(
+      id: data.id.present ? data.id.value : this.id,
+      smsId: data.smsId.present ? data.smsId.value : this.smsId,
+      sender: data.sender.present ? data.sender.value : this.sender,
+      body: data.body.present ? data.body.value : this.body,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UnparsedSms(')
+          ..write('id: $id, ')
+          ..write('smsId: $smsId, ')
+          ..write('sender: $sender, ')
+          ..write('body: $body, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, smsId, sender, body, receivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UnparsedSms &&
+          other.id == this.id &&
+          other.smsId == this.smsId &&
+          other.sender == this.sender &&
+          other.body == this.body &&
+          other.receivedAt == this.receivedAt);
+}
+
+class UnparsedSmsMessagesCompanion extends UpdateCompanion<UnparsedSms> {
+  final Value<int> id;
+  final Value<String> smsId;
+  final Value<String> sender;
+  final Value<String> body;
+  final Value<DateTime> receivedAt;
+  const UnparsedSmsMessagesCompanion({
+    this.id = const Value.absent(),
+    this.smsId = const Value.absent(),
+    this.sender = const Value.absent(),
+    this.body = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+  });
+  UnparsedSmsMessagesCompanion.insert({
+    this.id = const Value.absent(),
+    required String smsId,
+    required String sender,
+    required String body,
+    required DateTime receivedAt,
+  }) : smsId = Value(smsId),
+       sender = Value(sender),
+       body = Value(body),
+       receivedAt = Value(receivedAt);
+  static Insertable<UnparsedSms> custom({
+    Expression<int>? id,
+    Expression<String>? smsId,
+    Expression<String>? sender,
+    Expression<String>? body,
+    Expression<DateTime>? receivedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (smsId != null) 'sms_id': smsId,
+      if (sender != null) 'sender': sender,
+      if (body != null) 'body': body,
+      if (receivedAt != null) 'received_at': receivedAt,
+    });
+  }
+
+  UnparsedSmsMessagesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? smsId,
+    Value<String>? sender,
+    Value<String>? body,
+    Value<DateTime>? receivedAt,
+  }) {
+    return UnparsedSmsMessagesCompanion(
+      id: id ?? this.id,
+      smsId: smsId ?? this.smsId,
+      sender: sender ?? this.sender,
+      body: body ?? this.body,
+      receivedAt: receivedAt ?? this.receivedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (smsId.present) {
+      map['sms_id'] = Variable<String>(smsId.value);
+    }
+    if (sender.present) {
+      map['sender'] = Variable<String>(sender.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<DateTime>(receivedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UnparsedSmsMessagesCompanion(')
+          ..write('id: $id, ')
+          ..write('smsId: $smsId, ')
+          ..write('sender: $sender, ')
+          ..write('body: $body, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1863,6 +2208,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
   late final $NotificationsTable notifications = $NotificationsTable(this);
+  late final $UnparsedSmsMessagesTable unparsedSmsMessages =
+      $UnparsedSmsMessagesTable(this);
   late final Index transactionsSmsId = Index(
     'transactions_sms_id',
     'CREATE UNIQUE INDEX transactions_sms_id ON transactions (sms_id)',
@@ -1876,6 +2223,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     budgets,
     notifications,
+    unparsedSmsMessages,
     transactionsSmsId,
   ];
 }
@@ -3271,6 +3619,223 @@ typedef $$NotificationsTableProcessedTableManager =
       AppNotification,
       PrefetchHooks Function()
     >;
+typedef $$UnparsedSmsMessagesTableCreateCompanionBuilder =
+    UnparsedSmsMessagesCompanion Function({
+      Value<int> id,
+      required String smsId,
+      required String sender,
+      required String body,
+      required DateTime receivedAt,
+    });
+typedef $$UnparsedSmsMessagesTableUpdateCompanionBuilder =
+    UnparsedSmsMessagesCompanion Function({
+      Value<int> id,
+      Value<String> smsId,
+      Value<String> sender,
+      Value<String> body,
+      Value<DateTime> receivedAt,
+    });
+
+class $$UnparsedSmsMessagesTableFilterComposer
+    extends Composer<_$AppDatabase, $UnparsedSmsMessagesTable> {
+  $$UnparsedSmsMessagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get smsId => $composableBuilder(
+    column: $table.smsId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sender => $composableBuilder(
+    column: $table.sender,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$UnparsedSmsMessagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $UnparsedSmsMessagesTable> {
+  $$UnparsedSmsMessagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get smsId => $composableBuilder(
+    column: $table.smsId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sender => $composableBuilder(
+    column: $table.sender,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$UnparsedSmsMessagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $UnparsedSmsMessagesTable> {
+  $$UnparsedSmsMessagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get smsId =>
+      $composableBuilder(column: $table.smsId, builder: (column) => column);
+
+  GeneratedColumn<String> get sender =>
+      $composableBuilder(column: $table.sender, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$UnparsedSmsMessagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $UnparsedSmsMessagesTable,
+          UnparsedSms,
+          $$UnparsedSmsMessagesTableFilterComposer,
+          $$UnparsedSmsMessagesTableOrderingComposer,
+          $$UnparsedSmsMessagesTableAnnotationComposer,
+          $$UnparsedSmsMessagesTableCreateCompanionBuilder,
+          $$UnparsedSmsMessagesTableUpdateCompanionBuilder,
+          (
+            UnparsedSms,
+            BaseReferences<
+              _$AppDatabase,
+              $UnparsedSmsMessagesTable,
+              UnparsedSms
+            >,
+          ),
+          UnparsedSms,
+          PrefetchHooks Function()
+        > {
+  $$UnparsedSmsMessagesTableTableManager(
+    _$AppDatabase db,
+    $UnparsedSmsMessagesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$UnparsedSmsMessagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$UnparsedSmsMessagesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$UnparsedSmsMessagesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> smsId = const Value.absent(),
+                Value<String> sender = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> receivedAt = const Value.absent(),
+              }) => UnparsedSmsMessagesCompanion(
+                id: id,
+                smsId: smsId,
+                sender: sender,
+                body: body,
+                receivedAt: receivedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String smsId,
+                required String sender,
+                required String body,
+                required DateTime receivedAt,
+              }) => UnparsedSmsMessagesCompanion.insert(
+                id: id,
+                smsId: smsId,
+                sender: sender,
+                body: body,
+                receivedAt: receivedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$UnparsedSmsMessagesTable, UnparsedSms>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $UnparsedSmsMessagesTable,
+                    UnparsedSms
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$UnparsedSmsMessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $UnparsedSmsMessagesTable,
+      UnparsedSms,
+      $$UnparsedSmsMessagesTableFilterComposer,
+      $$UnparsedSmsMessagesTableOrderingComposer,
+      $$UnparsedSmsMessagesTableAnnotationComposer,
+      $$UnparsedSmsMessagesTableCreateCompanionBuilder,
+      $$UnparsedSmsMessagesTableUpdateCompanionBuilder,
+      (
+        UnparsedSms,
+        BaseReferences<_$AppDatabase, $UnparsedSmsMessagesTable, UnparsedSms>,
+      ),
+      UnparsedSms,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3283,4 +3848,6 @@ class $AppDatabaseManager {
       $$BudgetsTableTableManager(_db, _db.budgets);
   $$NotificationsTableTableManager get notifications =>
       $$NotificationsTableTableManager(_db, _db.notifications);
+  $$UnparsedSmsMessagesTableTableManager get unparsedSmsMessages =>
+      $$UnparsedSmsMessagesTableTableManager(_db, _db.unparsedSmsMessages);
 }

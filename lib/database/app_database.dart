@@ -8,12 +8,14 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Categories, Transactions, Budgets, Notifications])
+@DriftDatabase(
+  tables: [Categories, Transactions, Budgets, Notifications, UnparsedSmsMessages],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,6 +32,9 @@ class AppDatabase extends _$AppDatabase {
           "UPDATE transactions SET source = "
           "CASE WHEN note LIKE 'پیامک%' THEN 'sms' ELSE 'manual' END",
         );
+      }
+      if (from < 3) {
+        await m.createTable(unparsedSmsMessages);
       }
     },
   );

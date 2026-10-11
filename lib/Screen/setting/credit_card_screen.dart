@@ -3,12 +3,17 @@ import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/bank_bin_detector.dart';
 import 'package:finance/database/bank_theme.dart';
 import 'package:finance/database/card_service.dart';
+import 'package:finance/database/database_provider.dart';
+import 'package:finance/extentions/extentions.dart';
+import 'package:finance/Screen/setting/unparsed_sms_screen.dart';
 import 'package:finance/services/sms_permission.dart';
 import 'package:finance/services/sms_sync_service.dart';
+import 'package:finance/sms/bank_sms_parser.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:finance/database/transaction_repository.dart';
+import 'package:page_transition/page_transition.dart';
 
 const _font = 'Vazirmatn';
 const _ok = Color(0xFF34D399);
@@ -65,6 +70,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
   bool _hasSaved = false;
   bool _editing = false;
   bool _smsEnabled = false;
+  int _unparsedCount = 0;
   bool _revealNumber = false;
   int _prevDigitsLen = 0;
 
@@ -92,6 +98,8 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     super.initState();
     _loadSaved();
     _checkSmsPermission();
+    _loadUnparsedCount();
+    unparsedSmsTicker.addListener(_loadUnparsedCount);
 
     _entryCtrl = AnimationController(
       vsync: this,
@@ -133,6 +141,12 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     }
     _prevDigitsLen = digits.length;
     setState(() {});
+  }
+
+  Future<void> _loadUnparsedCount() async {
+    final n = await countUnparsedSms();
+    if (!mounted) return;
+    setState(() => _unparsedCount = n);
   }
 
   Future<void> _checkSmsPermission() async {
@@ -295,9 +309,8 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       showGlassSnack(context, 'اول کارتت رو ذخیره کن');
       return;
     }
-    final bankName = _cardService.getCard()['bankName'] ?? '';
-    if (!SmsSyncService.isBankSupported(bankName)) {
-      showGlassSnack(context, 'خواندن پیامک این بانک هنوز پشتیبانی نمی‌شه');
+    if (_cardService.getSmsSender().isEmpty) {
+      showGlassSnack(context, 'اول فرستنده‌ی پیامک بانکت رو انتخاب کن');
       return;
     }
 
@@ -334,8 +347,136 @@ class _CreditCardScreenState extends State<CreditCardScreen>
     }
   }
 
+  // ─── منبع پیامک: فرستنده + ۴ رقم آخر حساب ───
+
+  // بعد از عوض شدن منبع، پیامک‌های قبلی با تنظیم جدید دوباره بررسی می‌شن
+  Future<void> _applySourceChange() async {
+    await SmsSyncService.resetCursor();
+    if (!mounted) return;
+    setState(() {});
+    if (!_smsEnabled) return;
+    final n = await SmsSyncService.sync();
+    if (!mounted) return;
+    if (n > 0) showGlassSnack(context, '$n تراکنش جدید ثبت شد');
+  }
+
+  Future<void> _pickSender() async {
+    final found = await SmsSyncService.discoverSenders();
+    if (!mounted) return;
+    if (found == null) {
+      showGlassSnack(context, 'برای دیدن فرستنده‌ها، دسترسی پیامک لازمه');
+      return;
+    }
+
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: kDialogBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(ctx).height * 0.7,
+            ),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                  child: Text('فرستنده‌ی پیامک بانک', style: glassText(20)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Text(
+                    found.isEmpty
+                        ? 'فرستنده‌ای با پیامک تراکنشی پیدا نشد. می‌تونی دستی وارد کنی.'
+                        : 'فرستنده‌هایی که تو پیامک‌هات تراکنش بانکی دارن',
+                    style: glassText(13, color: Constans.textSecondary),
+                  ),
+                ),
+                for (final f in found)
+                  ListTile(
+                    leading: Icon(Icons.sms_outlined, color: kSectionBlue),
+                    title: Text(
+                      f.address,
+                      textDirection: TextDirection.ltr,
+                      textAlign: TextAlign.right,
+                      style: glassText(17),
+                    ),
+                    subtitle: Text(
+                      '${f.count} پیامک تراکنشی'.farsiNumber,
+                      style: glassText(13, color: Constans.textSecondary),
+                    ),
+                    onTap: () => Navigator.pop(ctx, f.address),
+                  ),
+                ListTile(
+                  leading: Icon(Icons.edit_outlined, color: kSectionBlue),
+                  title: Text('وارد کردن دستی', style: glassText(17)),
+                  onTap: () => Navigator.pop(ctx, ''),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+
+    var sender = picked;
+    if (sender.isEmpty) {
+      final values = await showGlassForm(
+        context,
+        title: 'فرستنده‌ی پیامک',
+        fields: [
+          GlassFormField(
+            label: 'اسم یا شماره‌ی فرستنده',
+            initial: _cardService.getSmsSender(),
+          ),
+        ],
+        validate: (v) => v[0].isEmpty ? 'فرستنده رو وارد کن' : null,
+      );
+      if (values == null || !mounted) return;
+      sender = values[0];
+    }
+
+    if (sender == _cardService.getSmsSender()) return;
+    await _cardService.setSmsSender(sender);
+    await _applySourceChange();
+  }
+
+  Future<void> _editAccountLast4() async {
+    final values = await showGlassForm(
+      context,
+      title: '۴ رقم آخر حساب یا کارت',
+      fields: [
+        GlassFormField(
+          label: 'مثلاً ۱۲۳۴ (خالی = همه‌ی پیامک‌ها)',
+          initial: _cardService.getSmsAccountLast4(),
+          keyboard: TextInputType.number,
+        ),
+      ],
+      validate: (v) {
+        final d = _normalizeDigits(v[0]);
+        return d.isEmpty || RegExp(r'^\d{4}$').hasMatch(d)
+            ? null
+            : 'دقیقاً ۴ رقم وارد کن';
+      },
+    );
+    if (values == null || !mounted) return;
+
+    final last4 = _normalizeDigits(values[0]);
+    if (last4 == _cardService.getSmsAccountLast4()) return;
+    await _cardService.setSmsAccountLast4(last4);
+    await _applySourceChange();
+  }
+
   @override
   void dispose() {
+    unparsedSmsTicker.removeListener(_loadUnparsedCount);
     _inputs.removeListener(_onInputsChanged);
     _numberCtrl.dispose();
     _holderCtrl.dispose();
@@ -419,6 +560,41 @@ class _CreditCardScreenState extends State<CreditCardScreen>
                   : 'غیرفعال — برای فعال‌سازی روشن کن',
               value: _smsEnabled,
               onChanged: _toggleSmsParsing,
+            ),
+            GlassTile(
+              icon: Icons.sms_outlined,
+              title: 'فرستنده‌ی بانک',
+              subtitle: _cardService.getSmsSender().isEmpty
+                  ? 'انتخاب نشده'
+                  : _cardService.getSmsSender(),
+              onTap: _pickSender,
+            ),
+            GlassTile(
+              icon: Icons.pin_outlined,
+              title: '۴ رقم آخر حساب یا کارت',
+              subtitle: _cardService.getSmsAccountLast4().isEmpty
+                  ? 'اختیاری — برای رد کردن پیامک حساب‌های دیگه'
+                  : _cardService.getSmsAccountLast4().farsiNumber,
+              onTap: _editAccountLast4,
+            ),
+            GlassTile(
+              icon: Icons.mark_email_unread_outlined,
+              title: 'پیامک‌های نخونده',
+              subtitle: 'پیامک‌هایی که نتونستیم بخونیمشون',
+              trailing: Text(
+                '$_unparsedCount'.farsiNumber,
+                style: glassText(
+                  17,
+                  color: _unparsedCount > 0 ? kDanger : Constans.textSecondary,
+                ),
+              ),
+              onTap: () => Navigator.push(
+                context,
+                PageTransition(
+                  type: PageTransitionType.fade,
+                  child: const UnparsedSmsScreen(),
+                ),
+              ),
             ),
             if (_smsEnabled)
               const GlassTile(

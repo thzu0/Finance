@@ -72,3 +72,15 @@ class Notifications extends Table {
 
   DateTimeColumn get createdAt => dateTime()();
 }
+
+/// پیامک‌های فرستنده‌ی انتخاب‌شده که شبیه تراکنش بودن ولی پارس نشدن
+@DataClassName('UnparsedSms')
+class UnparsedSmsMessages extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// همون smsId تراکنش‌ها (فرستنده + زمان + هش متن)؛ برای جلوگیری از تکرار
+  TextColumn get smsId => text().unique()();
+  TextColumn get sender => text()();
+  TextColumn get body => text()();
+  DateTimeColumn get receivedAt => dateTime()();
+}

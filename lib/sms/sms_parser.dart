@@ -40,9 +40,22 @@ final _weakExpense = RegExp(r'خرید|پرداخت|انتقال|کارمزد|ق
 final _weakIncome = RegExp(r'دریافت|سود|یارانه|حقوق|پایا(?!نه)');
 final _label = RegExp(r'(مبلغ|برداشت|واریز|انتقال(?: اینترنت)?|خرید پایانه فروش|پایا(?!نه))[ \t]*:?[ \t]*([+-]?)[ \t]*(\d[\d,]*)');
 
+bool _isOtp(String text) =>
+    (text.contains('رمز') && text.contains('اعتبار')) || RegExp(r'رمز[^\n\d]*\d').hasMatch(text);
+
+/// آیا پیامک شبیه تراکنشه (مبلغ + کلمه‌ی کلیدی، بدون رمز یک‌بارمصرف)؟
+/// برای نگه‌داشتن پیامک‌هایی که parseBankSms نتونسته بخونه.
+bool looksLikeBankTransaction(String body) {
+  final text = normalizeSms(body);
+  if (_isOtp(text)) return false;
+  final t = text.replaceAll(RegExp(r'(?:مانده|موجودی)[^\n]*'), '');
+  final hasAmount = RegExp(r'(?<![\d/])(?:\d{1,3}(?:,\d{3})+|\d{4,})(?![\d/])').hasMatch(t);
+  return hasAmount && (_income.hasMatch(t) || _expense.hasMatch(t) || _weakExpense.hasMatch(t) || _weakIncome.hasMatch(t));
+}
+
 ParsedSms? parseBankSms(String body, {DateTime? receivedAt, DateTime? now}) {
   final text = normalizeSms(body);
-  if ((text.contains('رمز') && text.contains('اعتبار')) || RegExp(r'رمز[^\n\d]*\d').hasMatch(text)) return null;
+  if (_isOtp(text)) return null;
   final transactionText = text.replaceAll(RegExp(r'(?:مانده|موجودی)[^\n]*'), '');
   final signed = RegExp(r'(?:^|[ \t:])([+-])[ \t]*(\d[\d,]*)(?![\d/-])|(?:^|[ \t])(\d[\d,]*)([+-])(?:[ \t]|$)', multiLine: true).firstMatch(transactionText);
   final label = _label.firstMatch(transactionText);

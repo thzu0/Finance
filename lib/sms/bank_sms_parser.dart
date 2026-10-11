@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
+import 'package:finance/database/app_database.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/database/seed_categories.dart';
@@ -16,14 +17,31 @@ String buildSmsId(String sender, DateTime receivedAt, String body) {
 
 /// یک پیامک رو پارس می‌کنه و اگه تکراری نبود ثبت می‌کنه.
 /// true یعنی تراکنش جدید ثبت شد.
+///
+/// [bankName] همون فرستنده‌ی انتخاب‌شده‌ست.
+/// [accountLast4Filter] خالی یعنی فیلتر حساب خاموشه؛ وگرنه پیامکی که شناسه‌ی
+/// حسابش با این مقدار فرق داره رد می‌شه (پیامک بدون شناسه قبول می‌شه).
 Future<bool> importSmsForBank(
-  String cardBankName,
+  String bankName,
   String body, {
   required DateTime receivedAt,
   required String sender,
+  String accountLast4Filter = '',
 }) async {
   final sms = parseBankSms(body, receivedAt: receivedAt);
-  if (sms == null) return false;
+  if (sms == null) {
+    // شبیه تراکنشه ولی خونده نشد: دور ریخته نشه
+    if (looksLikeBankTransaction(body)) {
+      await _saveUnparsed(sender, receivedAt, body);
+    }
+    return false;
+  }
+
+  if (accountLast4Filter.isNotEmpty &&
+      sms.accountLast4 != null &&
+      sms.accountLast4 != accountLast4Filter) {
+    return false;
+  }
 
   // لنگر موجودی (فقط وقتی مانده‌ی سالم داریم)
   final st = AppSettings.instance;
@@ -67,12 +85,39 @@ Future<bool> importSmsForBank(
     categoryId: cat.id,
     date: sms.timestamp,
     type: sms.type,
-    note: 'پیامک $cardBankName',
+    note: 'پیامک $bankName',
     source: 'sms',
-    bankName: cardBankName,
+    bankName: bankName,
     accountLast4: sms.accountLast4,
     balanceAfterRial: balance,
     smsId: smsId,
   );
   return true;
+}
+
+Future<void> _saveUnparsed(
+  String sender,
+  DateTime receivedAt,
+  String body,
+) async {
+  await database
+      .into(database.unparsedSmsMessages)
+      .insert(
+        UnparsedSmsMessagesCompanion.insert(
+          smsId: buildSmsId(sender, receivedAt, body),
+          sender: sender,
+          body: body,
+          receivedAt: receivedAt,
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+  unparsedSmsTicker.value++;
+}
+
+Future<int> countUnparsedSms() async {
+  final count = countAll();
+  final row = await (database.selectOnly(
+    database.unparsedSmsMessages,
+  )..addColumns([count])).getSingle();
+  return row.read(count) ?? 0;
 }

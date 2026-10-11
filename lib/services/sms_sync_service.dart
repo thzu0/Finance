@@ -2,6 +2,7 @@ import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
 import 'package:finance/database/database_provider.dart';
 import 'package:finance/sms/bank_sms_parser.dart';
+import 'package:finance/sms/sms_parser.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -12,27 +13,41 @@ class SmsSyncService {
   /// بار اول چند روز عقب‌تر پیامک‌ها خونده بشه (۰ = همه‌ی پیامک‌ها)
   static const int _firstRunDays = 365;
 
-  /// اسم فرستنده‌های هر بانک (طبق چیزی که توی اینباکس گوشی دیده می‌شه)
-  static const Map<String, List<String>> _sendersByBank = {
-    'پاسارگاد': ['B.Pasargad', 'Pasargad'],
-    'رسالت': ['ResalatBank', 'Resalat'],
-    'مهر ایران': ['B.QMEHRIRAN', 'QMEHRIRAN'],
-    'مسکن': ['BankMaskan'],
-    'بلو': ['+98 999 998 7641', '9999987641', 'Blu'],
-    'سپه': ['SEPAHBANK', 'BankSepah', 'Sepah', 'SEPAH'],
-    'شهر': ['BankShahr', 'B.SHAHR', 'Shahr', 'SHAHR'],
-    // بانک جدید: اسم فرستنده‌اش رو اینجا اضافه کن
-  };
+  static int get _firstRunTs => _firstRunDays == 0
+      ? 0
+      : DateTime.now()
+            .subtract(const Duration(days: _firstRunDays))
+            .millisecondsSinceEpoch;
 
-  static List<String> _sendersFor(String bankName) {
-    for (final entry in _sendersByBank.entries) {
-      if (bankName.contains(entry.key)) return entry.value;
+  /// فرستنده‌ی پیامک بدون حساسیت به حروف بزرگ/کوچک و فاصله‌ی دور متن مقایسه می‌شه
+  static bool senderMatches(String? address, String selected) =>
+      address != null &&
+      address.trim().toLowerCase() == selected.trim().toLowerCase();
+
+  /// بعد از عوض شدن فرستنده یا ۴ رقم حساب صدا بزن تا پیامک‌های قبلی
+  /// دوباره با تنظیم جدید بررسی بشن (تکراری‌ها با smsId ثبت نمی‌شن).
+  static Future<void> resetCursor() =>
+      AppSettings.instance.set('sms_last_ts', _firstRunTs);
+
+  /// فرستنده‌هایی که توی اینباکس پیامک تراکنشی دارن، به ترتیب تعداد.
+  /// null یعنی دسترسی پیامک داده نشد.
+  static Future<List<({String address, int count})>?> discoverSenders() async {
+    if (!await Permission.sms.isGranted &&
+        !(await Permission.sms.request()).isGranted) {
+      return null;
     }
-    return const [];
+    final messages = await SmsQuery().querySms(count: 1000);
+    final counts = <String, int>{};
+    for (final m in messages) {
+      final address = m.address?.trim();
+      if (address == null || address.isEmpty) continue;
+      if (parseBankSms(m.body ?? '') == null) continue;
+      counts[address] = (counts[address] ?? 0) + 1;
+    }
+    return [
+      for (final e in counts.entries) (address: e.key, count: e.value),
+    ]..sort((a, b) => b.count.compareTo(a.count));
   }
-
-  static bool isBankSupported(String bankName) =>
-      _sendersFor(bankName).isNotEmpty;
 
   /// پیامک‌های جدید رو می‌خونه و تراکنش ثبت می‌کنه.
   /// تعداد تراکنش‌های جدید رو برمی‌گردونه.
@@ -44,31 +59,24 @@ class SmsSyncService {
       if (!cards.hasCard() || !cards.isSmsParsingEnabled()) return 0;
       if (!await Permission.sms.isGranted) return 0;
 
-      final bank = cards.getCard()['bankName']!;
-      final senders = _sendersFor(bank);
-      if (senders.isEmpty) return 0;
+      final sender = cards.getSmsSender();
+      if (sender.isEmpty) return 0;
+      final last4 = cards.getSmsAccountLast4();
 
       final s = AppSettings.instance;
-      final firstRun = _firstRunDays == 0
-          ? 0
-          : DateTime.now()
-                .subtract(const Duration(days: _firstRunDays))
-                .millisecondsSinceEpoch;
-      final since = s.get<int>('sms_last_ts', firstRun);
+      final since = s.get<int>('sms_last_ts', _firstRunTs);
 
-      // فقط پیامک‌های فرستنده‌ی همین بانک
-      final query = SmsQuery();
-      final all = <SmsMessage>[];
-      for (final addr in senders) {
-        final result = await query.querySms(address: addr);
-        all.addAll(result);
-      }
+      // فقط پیامک‌های فرستنده‌ی انتخاب‌شده
+      final all = await SmsQuery().querySms(address: sender);
 
       // فقط جدیدها، از قدیم به جدید
       final fresh =
           all
               .where(
-                (m) => m.date != null && m.date!.millisecondsSinceEpoch > since,
+                (m) =>
+                    m.date != null &&
+                    m.date!.millisecondsSinceEpoch > since &&
+                    senderMatches(m.address, sender),
               )
               .toList()
             ..sort((a, b) => a.date!.compareTo(b.date!));
@@ -79,10 +87,11 @@ class SmsSyncService {
         final ts = m.date!.millisecondsSinceEpoch;
         if (ts > newest) newest = ts;
         final imported = await importSmsForBank(
-          bank,
+          sender,
           m.body ?? '',
           receivedAt: m.date!,
-          sender: m.address ?? '',
+          sender: m.address ?? sender,
+          accountLast4Filter: last4,
         );
         if (imported) added++;
       }

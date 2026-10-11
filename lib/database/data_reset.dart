@@ -7,7 +7,9 @@ Future<void> clearAllData() async {
   await database.delete(database.transactions).go();
   await database.delete(database.budgets).go();
   await database.delete(database.categories).go();
+  await database.delete(database.unparsedSmsMessages).go();
   await seedCategoriesIfEmpty();
   transactionsTicker.value++;
   budgetsTicker.value++;
+  unparsedSmsTicker.value++;
 }

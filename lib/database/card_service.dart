@@ -42,4 +42,16 @@ class CardService {
   bool isSmsParsingEnabled() => _s.get<bool>('sms_parsing', false);
 
   Future<void> setSmsParsing(bool enabled) => _s.set('sms_parsing', enabled);
+
+  // ─── منبع پیامک (فقط یک فرستنده / یک حساب) ───
+
+  String getSmsSender() => _s.get<String>('sms_sender', '');
+
+  Future<void> setSmsSender(String sender) => _s.set('sms_sender', sender);
+
+  /// ۴ رقم آخر حساب یا کارت؛ خالی یعنی فیلتر حساب خاموشه
+  String getSmsAccountLast4() => _s.get<String>('sms_account_last4', '');
+
+  Future<void> setSmsAccountLast4(String last4) =>
+      _s.set('sms_account_last4', last4);
 }

@@ -276,4 +276,25 @@ void main() {
       expect(parseBankSms('\u200E\u200F\u202A\u202C\u200C', now: _now), isNull);
     });
   });
+
+  group('looksLikeBankTransaction', () {
+    test('مبلغ + کلمه‌ی کلیدی', () {
+      expect(looksLikeBankTransaction('پرداخت 1,200,000 ریال انجام شد'), isTrue);
+    });
+    test('رمز یک‌بارمصرف', () {
+      expect(looksLikeBankTransaction('انتقال به 621986*0001 مبلغ: 40,000,000 ريال رمز: 000396'), isFalse);
+    });
+    test('عدد بدون کلمه‌ی کلیدی', () {
+      expect(looksLikeBankTransaction('کد تخفیف شما 123456'), isFalse);
+    });
+    test('فقط مانده', () {
+      expect(looksLikeBankTransaction('پرداخت\nمانده: 5,293,000'), isFalse);
+    });
+    test('فقط تاریخ', () {
+      expect(looksLikeBankTransaction('پرداخت قسط در تاریخ 1405/07/05'), isFalse);
+    });
+    test('رشته‌ی خالی', () {
+      expect(looksLikeBankTransaction(''), isFalse);
+    });
+  });
 }
