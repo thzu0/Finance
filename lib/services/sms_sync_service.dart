@@ -31,6 +31,9 @@ class SmsSyncService {
     return const [];
   }
 
+  static bool isBankSupported(String bankName) =>
+      _sendersFor(bankName).isNotEmpty;
+
   /// پیامک‌های جدید رو می‌خونه و تراکنش ثبت می‌کنه.
   /// تعداد تراکنش‌های جدید رو برمی‌گردونه.
   static Future<int> sync() async {
@@ -42,8 +45,6 @@ class SmsSyncService {
       if (!await Permission.sms.isGranted) return 0;
 
       final bank = cards.getCard()['bankName']!;
-      if (!SmsParserRegistry.isSupported(bank)) return 0;
-
       final senders = _sendersFor(bank);
       if (senders.isEmpty) return 0;
 
@@ -77,7 +78,13 @@ class SmsSyncService {
       for (final m in fresh) {
         final ts = m.date!.millisecondsSinceEpoch;
         if (ts > newest) newest = ts;
-        if (await importSmsForBank(bank, m.body ?? '')) added++;
+        final imported = await importSmsForBank(
+          bank,
+          m.body ?? '',
+          receivedAt: m.date!,
+          sender: m.address ?? '',
+        );
+        if (imported) added++;
       }
 
       await s.set('sms_last_ts', newest);

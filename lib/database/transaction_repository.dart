@@ -14,6 +14,11 @@ Future<int> addTransaction({
   required DateTime date,
   required String type,
   String note = '',
+  String source = 'manual',
+  String? bankName,
+  String? accountLast4,
+  int? balanceAfterRial,
+  String? smsId,
 }) async {
   final id = await database
       .into(database.transactions)
@@ -24,6 +29,11 @@ Future<int> addTransaction({
           date: Value(date),
           type: Value(type),
           note: Value(note),
+          source: Value(source),
+          bankName: Value(bankName),
+          accountLast4: Value(accountLast4),
+          balanceAfterRial: Value(balanceAfterRial),
+          smsId: Value(smsId),
         ),
       );
 

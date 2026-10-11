@@ -8,6 +8,7 @@ class Categories extends Table {
   TextColumn get type => text()(); // 'income' یا 'expense'
 }
 
+@TableIndex(name: 'transactions_sms_id', columns: {#smsId}, unique: true)
 class Transactions extends Table {
   IntColumn get id => integer().autoIncrement()();
   RealColumn get amount => real()();
@@ -17,6 +18,19 @@ class Transactions extends Table {
     const Constant(''),
   )(); //with default means if user dont write any note this property use '' for default
   TextColumn get type => text()(); // 'income' یا 'expense'
+
+  /// منبع تراکنش: 'sms' یا 'manual'
+  TextColumn get source => text().nullable()();
+  TextColumn get bankName => text().nullable()();
+
+  /// فقط ۴ رقم آخر حساب/کارت
+  TextColumn get accountLast4 => text().nullable()();
+
+  /// مانده‌ی بعد از تراکنش (ریال)
+  IntColumn get balanceAfterRial => integer().nullable()();
+
+  /// ترکیب فرستنده + زمان + هش متن پیامک (یکتا؛ چند NULL مجازه)
+  TextColumn get smsId => text().nullable()();
 }
 
 class Budgets extends Table {

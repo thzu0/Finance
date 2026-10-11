@@ -5,7 +5,6 @@ import 'package:finance/database/bank_theme.dart';
 import 'package:finance/database/card_service.dart';
 import 'package:finance/services/sms_permission.dart';
 import 'package:finance/services/sms_sync_service.dart';
-import 'package:finance/sms/bank_sms_parser.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -297,7 +296,7 @@ class _CreditCardScreenState extends State<CreditCardScreen>
       return;
     }
     final bankName = _cardService.getCard()['bankName'] ?? '';
-    if (!SmsParserRegistry.isSupported(bankName)) {
+    if (!SmsSyncService.isBankSupported(bankName)) {
       showGlassSnack(context, 'خواندن پیامک این بانک هنوز پشتیبانی نمی‌شه');
       return;
     }

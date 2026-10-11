@@ -411,6 +411,57 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bankNameMeta = const VerificationMeta(
+    'bankName',
+  );
+  @override
+  late final GeneratedColumn<String> bankName = GeneratedColumn<String>(
+    'bank_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountLast4Meta = const VerificationMeta(
+    'accountLast4',
+  );
+  @override
+  late final GeneratedColumn<String> accountLast4 = GeneratedColumn<String>(
+    'account_last4',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _balanceAfterRialMeta = const VerificationMeta(
+    'balanceAfterRial',
+  );
+  @override
+  late final GeneratedColumn<int> balanceAfterRial = GeneratedColumn<int>(
+    'balance_after_rial',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _smsIdMeta = const VerificationMeta('smsId');
+  @override
+  late final GeneratedColumn<String> smsId = GeneratedColumn<String>(
+    'sms_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -419,6 +470,11 @@ class $TransactionsTable extends Transactions
     date,
     note,
     type,
+    source,
+    bankName,
+    accountLast4,
+    balanceAfterRial,
+    smsId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -473,6 +529,42 @@ class $TransactionsTable extends Transactions
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    }
+    if (data.containsKey('bank_name')) {
+      context.handle(
+        _bankNameMeta,
+        bankName.isAcceptableOrUnknown(data['bank_name']!, _bankNameMeta),
+      );
+    }
+    if (data.containsKey('account_last4')) {
+      context.handle(
+        _accountLast4Meta,
+        accountLast4.isAcceptableOrUnknown(
+          data['account_last4']!,
+          _accountLast4Meta,
+        ),
+      );
+    }
+    if (data.containsKey('balance_after_rial')) {
+      context.handle(
+        _balanceAfterRialMeta,
+        balanceAfterRial.isAcceptableOrUnknown(
+          data['balance_after_rial']!,
+          _balanceAfterRialMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sms_id')) {
+      context.handle(
+        _smsIdMeta,
+        smsId.isAcceptableOrUnknown(data['sms_id']!, _smsIdMeta),
+      );
+    }
     return context;
   }
 
@@ -506,6 +598,26 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      ),
+      bankName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bank_name'],
+      ),
+      accountLast4: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_last4'],
+      ),
+      balanceAfterRial: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}balance_after_rial'],
+      ),
+      smsId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sms_id'],
+      ),
     );
   }
 
@@ -522,6 +634,19 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final DateTime date;
   final String note;
   final String type;
+
+  /// منبع تراکنش: 'sms' یا 'manual'
+  final String? source;
+  final String? bankName;
+
+  /// فقط ۴ رقم آخر حساب/کارت
+  final String? accountLast4;
+
+  /// مانده‌ی بعد از تراکنش (ریال)
+  final int? balanceAfterRial;
+
+  /// ترکیب فرستنده + زمان + هش متن پیامک (یکتا؛ چند NULL مجازه)
+  final String? smsId;
   const Transaction({
     required this.id,
     required this.amount,
@@ -529,6 +654,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.date,
     required this.note,
     required this.type,
+    this.source,
+    this.bankName,
+    this.accountLast4,
+    this.balanceAfterRial,
+    this.smsId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -539,6 +669,21 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['date'] = Variable<DateTime>(date);
     map['note'] = Variable<String>(note);
     map['type'] = Variable<String>(type);
+    if (!nullToAbsent || source != null) {
+      map['source'] = Variable<String>(source);
+    }
+    if (!nullToAbsent || bankName != null) {
+      map['bank_name'] = Variable<String>(bankName);
+    }
+    if (!nullToAbsent || accountLast4 != null) {
+      map['account_last4'] = Variable<String>(accountLast4);
+    }
+    if (!nullToAbsent || balanceAfterRial != null) {
+      map['balance_after_rial'] = Variable<int>(balanceAfterRial);
+    }
+    if (!nullToAbsent || smsId != null) {
+      map['sms_id'] = Variable<String>(smsId);
+    }
     return map;
   }
 
@@ -550,6 +695,21 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       date: Value(date),
       note: Value(note),
       type: Value(type),
+      source: source == null && nullToAbsent
+          ? const Value.absent()
+          : Value(source),
+      bankName: bankName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bankName),
+      accountLast4: accountLast4 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountLast4),
+      balanceAfterRial: balanceAfterRial == null && nullToAbsent
+          ? const Value.absent()
+          : Value(balanceAfterRial),
+      smsId: smsId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(smsId),
     );
   }
 
@@ -565,6 +725,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       date: serializer.fromJson<DateTime>(json['date']),
       note: serializer.fromJson<String>(json['note']),
       type: serializer.fromJson<String>(json['type']),
+      source: serializer.fromJson<String?>(json['source']),
+      bankName: serializer.fromJson<String?>(json['bankName']),
+      accountLast4: serializer.fromJson<String?>(json['accountLast4']),
+      balanceAfterRial: serializer.fromJson<int?>(json['balanceAfterRial']),
+      smsId: serializer.fromJson<String?>(json['smsId']),
     );
   }
   @override
@@ -577,6 +742,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'date': serializer.toJson<DateTime>(date),
       'note': serializer.toJson<String>(note),
       'type': serializer.toJson<String>(type),
+      'source': serializer.toJson<String?>(source),
+      'bankName': serializer.toJson<String?>(bankName),
+      'accountLast4': serializer.toJson<String?>(accountLast4),
+      'balanceAfterRial': serializer.toJson<int?>(balanceAfterRial),
+      'smsId': serializer.toJson<String?>(smsId),
     };
   }
 
@@ -587,6 +757,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     DateTime? date,
     String? note,
     String? type,
+    Value<String?> source = const Value.absent(),
+    Value<String?> bankName = const Value.absent(),
+    Value<String?> accountLast4 = const Value.absent(),
+    Value<int?> balanceAfterRial = const Value.absent(),
+    Value<String?> smsId = const Value.absent(),
   }) => Transaction(
     id: id ?? this.id,
     amount: amount ?? this.amount,
@@ -594,6 +769,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     date: date ?? this.date,
     note: note ?? this.note,
     type: type ?? this.type,
+    source: source.present ? source.value : this.source,
+    bankName: bankName.present ? bankName.value : this.bankName,
+    accountLast4: accountLast4.present ? accountLast4.value : this.accountLast4,
+    balanceAfterRial: balanceAfterRial.present
+        ? balanceAfterRial.value
+        : this.balanceAfterRial,
+    smsId: smsId.present ? smsId.value : this.smsId,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -605,6 +787,15 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       date: data.date.present ? data.date.value : this.date,
       note: data.note.present ? data.note.value : this.note,
       type: data.type.present ? data.type.value : this.type,
+      source: data.source.present ? data.source.value : this.source,
+      bankName: data.bankName.present ? data.bankName.value : this.bankName,
+      accountLast4: data.accountLast4.present
+          ? data.accountLast4.value
+          : this.accountLast4,
+      balanceAfterRial: data.balanceAfterRial.present
+          ? data.balanceAfterRial.value
+          : this.balanceAfterRial,
+      smsId: data.smsId.present ? data.smsId.value : this.smsId,
     );
   }
 
@@ -616,13 +807,30 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('categoryId: $categoryId, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
-          ..write('type: $type')
+          ..write('type: $type, ')
+          ..write('source: $source, ')
+          ..write('bankName: $bankName, ')
+          ..write('accountLast4: $accountLast4, ')
+          ..write('balanceAfterRial: $balanceAfterRial, ')
+          ..write('smsId: $smsId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, amount, categoryId, date, note, type);
+  int get hashCode => Object.hash(
+    id,
+    amount,
+    categoryId,
+    date,
+    note,
+    type,
+    source,
+    bankName,
+    accountLast4,
+    balanceAfterRial,
+    smsId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -632,7 +840,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.categoryId == this.categoryId &&
           other.date == this.date &&
           other.note == this.note &&
-          other.type == this.type);
+          other.type == this.type &&
+          other.source == this.source &&
+          other.bankName == this.bankName &&
+          other.accountLast4 == this.accountLast4 &&
+          other.balanceAfterRial == this.balanceAfterRial &&
+          other.smsId == this.smsId);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -642,6 +855,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<DateTime> date;
   final Value<String> note;
   final Value<String> type;
+  final Value<String?> source;
+  final Value<String?> bankName;
+  final Value<String?> accountLast4;
+  final Value<int?> balanceAfterRial;
+  final Value<String?> smsId;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.amount = const Value.absent(),
@@ -649,6 +867,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.date = const Value.absent(),
     this.note = const Value.absent(),
     this.type = const Value.absent(),
+    this.source = const Value.absent(),
+    this.bankName = const Value.absent(),
+    this.accountLast4 = const Value.absent(),
+    this.balanceAfterRial = const Value.absent(),
+    this.smsId = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -657,6 +880,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required DateTime date,
     this.note = const Value.absent(),
     required String type,
+    this.source = const Value.absent(),
+    this.bankName = const Value.absent(),
+    this.accountLast4 = const Value.absent(),
+    this.balanceAfterRial = const Value.absent(),
+    this.smsId = const Value.absent(),
   }) : amount = Value(amount),
        categoryId = Value(categoryId),
        date = Value(date),
@@ -668,6 +896,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<DateTime>? date,
     Expression<String>? note,
     Expression<String>? type,
+    Expression<String>? source,
+    Expression<String>? bankName,
+    Expression<String>? accountLast4,
+    Expression<int>? balanceAfterRial,
+    Expression<String>? smsId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -676,6 +909,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (date != null) 'date': date,
       if (note != null) 'note': note,
       if (type != null) 'type': type,
+      if (source != null) 'source': source,
+      if (bankName != null) 'bank_name': bankName,
+      if (accountLast4 != null) 'account_last4': accountLast4,
+      if (balanceAfterRial != null) 'balance_after_rial': balanceAfterRial,
+      if (smsId != null) 'sms_id': smsId,
     });
   }
 
@@ -686,6 +924,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<DateTime>? date,
     Value<String>? note,
     Value<String>? type,
+    Value<String?>? source,
+    Value<String?>? bankName,
+    Value<String?>? accountLast4,
+    Value<int?>? balanceAfterRial,
+    Value<String?>? smsId,
   }) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -694,6 +937,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       date: date ?? this.date,
       note: note ?? this.note,
       type: type ?? this.type,
+      source: source ?? this.source,
+      bankName: bankName ?? this.bankName,
+      accountLast4: accountLast4 ?? this.accountLast4,
+      balanceAfterRial: balanceAfterRial ?? this.balanceAfterRial,
+      smsId: smsId ?? this.smsId,
     );
   }
 
@@ -718,6 +966,21 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (bankName.present) {
+      map['bank_name'] = Variable<String>(bankName.value);
+    }
+    if (accountLast4.present) {
+      map['account_last4'] = Variable<String>(accountLast4.value);
+    }
+    if (balanceAfterRial.present) {
+      map['balance_after_rial'] = Variable<int>(balanceAfterRial.value);
+    }
+    if (smsId.present) {
+      map['sms_id'] = Variable<String>(smsId.value);
+    }
     return map;
   }
 
@@ -729,7 +992,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('categoryId: $categoryId, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
-          ..write('type: $type')
+          ..write('type: $type, ')
+          ..write('source: $source, ')
+          ..write('bankName: $bankName, ')
+          ..write('accountLast4: $accountLast4, ')
+          ..write('balanceAfterRial: $balanceAfterRial, ')
+          ..write('smsId: $smsId')
           ..write(')'))
         .toString();
   }
@@ -1595,6 +1863,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
   late final $NotificationsTable notifications = $NotificationsTable(this);
+  late final Index transactionsSmsId = Index(
+    'transactions_sms_id',
+    'CREATE UNIQUE INDEX transactions_sms_id ON transactions (sms_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1604,6 +1876,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     budgets,
     notifications,
+    transactionsSmsId,
   ];
 }
 
@@ -2006,6 +2279,11 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required DateTime date,
       Value<String> note,
       required String type,
+      Value<String?> source,
+      Value<String?> bankName,
+      Value<String?> accountLast4,
+      Value<int?> balanceAfterRial,
+      Value<String?> smsId,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
     TransactionsCompanion Function({
@@ -2015,6 +2293,11 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<DateTime> date,
       Value<String> note,
       Value<String> type,
+      Value<String?> source,
+      Value<String?> bankName,
+      Value<String?> accountLast4,
+      Value<int?> balanceAfterRial,
+      Value<String?> smsId,
     });
 
 final class $$TransactionsTableReferences
@@ -2070,6 +2353,31 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
     column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bankName => $composableBuilder(
+    column: $table.bankName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get balanceAfterRial => $composableBuilder(
+    column: $table.balanceAfterRial,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get smsId => $composableBuilder(
+    column: $table.smsId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2131,6 +2439,31 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bankName => $composableBuilder(
+    column: $table.bankName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get balanceAfterRial => $composableBuilder(
+    column: $table.balanceAfterRial,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get smsId => $composableBuilder(
+    column: $table.smsId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2178,6 +2511,25 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get bankName =>
+      $composableBuilder(column: $table.bankName, builder: (column) => column);
+
+  GeneratedColumn<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get balanceAfterRial => $composableBuilder(
+    column: $table.balanceAfterRial,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get smsId =>
+      $composableBuilder(column: $table.smsId, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get categoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -2237,6 +2589,11 @@ class $$TransactionsTableTableManager
                 Value<DateTime> date = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<String?> source = const Value.absent(),
+                Value<String?> bankName = const Value.absent(),
+                Value<String?> accountLast4 = const Value.absent(),
+                Value<int?> balanceAfterRial = const Value.absent(),
+                Value<String?> smsId = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
                 amount: amount,
@@ -2244,6 +2601,11 @@ class $$TransactionsTableTableManager
                 date: date,
                 note: note,
                 type: type,
+                source: source,
+                bankName: bankName,
+                accountLast4: accountLast4,
+                balanceAfterRial: balanceAfterRial,
+                smsId: smsId,
               ),
           createCompanionCallback:
               ({
@@ -2253,6 +2615,11 @@ class $$TransactionsTableTableManager
                 required DateTime date,
                 Value<String> note = const Value.absent(),
                 required String type,
+                Value<String?> source = const Value.absent(),
+                Value<String?> bankName = const Value.absent(),
+                Value<String?> accountLast4 = const Value.absent(),
+                Value<int?> balanceAfterRial = const Value.absent(),
+                Value<String?> smsId = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
                 amount: amount,
@@ -2260,6 +2627,11 @@ class $$TransactionsTableTableManager
                 date: date,
                 note: note,
                 type: type,
+                source: source,
+                bankName: bankName,
+                accountLast4: accountLast4,
+                balanceAfterRial: balanceAfterRial,
+                smsId: smsId,
               ),
           withReferenceMapper: (p0) => p0
               .map(
