@@ -21,7 +21,7 @@ String normalizeSms(String body) {
   }
   return buffer.toString().replaceAll('ي', 'ی').replaceAll('ك', 'ک')
     .replaceAll('٬', ',')
-    .replaceAll(RegExp(r'[‌‎‏‪-‮⁦-⁩]'), '')
+    .replaceAll(RegExp(r'[\u200C\u200E\u200F\u202A-\u202E\u2066-\u2069]'), '')
     .replaceAll('\r\n', '\n').replaceAll('\r', '\n')
     .replaceAll(RegExp(r'j\.n\.b:[ \t]*', caseSensitive: false), '')
     .replaceAllMapped(RegExp(r'\*(بانک[^*\n]+)\*'), (m) => m[1]!)
@@ -64,14 +64,14 @@ ParsedSms? parseBankSms(String body, {DateTime? receivedAt, DateTime? now}) {
   }
   final factor = text.contains('تومان') ? 10 : 1;
   final balance = _money(RegExp(r'(?:مانده|موجودی)[ \t]*:?[ \t]*(\d[\d,]*)').firstMatch(text)?[1]);
-  final account = RegExp(r'(?:حساب|برداشت از|واریز(?: سود)? به|کارت)[ \t]*:?[ \t]*(\d{6,})(?![\d*])').firstMatch(text)?[1];
+  final account = RegExp(r'(?:حساب|برداشت از|واریز(?: سود)? به|کارت)[ \t]*:?[ \t]*\d{2,}(\d{4})(?![\d*])').firstMatch(text)?[1];
   final titles = text.split('\n').where((l) => !RegExp(r'\d|مانده|موجودی|حساب|^بانک|^بلو$').hasMatch(l) &&
     (_income.hasMatch(l) || _expense.hasMatch(l) || _weakExpense.hasMatch(l) || _weakIncome.hasMatch(l))).toList();
   final title = titles.isNotEmpty ? titles.last.replaceAll(RegExp(r'\s*مورخ$'), '') :
     label != null && label[1] != 'مبلغ' ? label[1] : type == 'income' ? 'واریز' : 'برداشت';
   return ParsedSms(type: type, amountRial: amount * factor,
     balanceRial: balance == null ? null : balance * factor,
-    accountLast4: account == null ? null : account.substring(account.length - 4),
+    accountLast4: account,
     title: title, timestamp: receivedAt ?? _timestamp(text, now ?? DateTime.now()));
 }
 
