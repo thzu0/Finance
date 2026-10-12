@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 class AutoMarqueeText extends StatelessWidget {
   final String text;
   final TextStyle? style;
+  final TextAlign? textAlign;
 
   /// فاصله‌ی بین آخر متن و شروع دوباره‌ش
   final double gap;
@@ -17,6 +18,7 @@ class AutoMarqueeText extends StatelessWidget {
     this.text, {
     super.key,
     this.style,
+    this.textAlign,
     this.gap = 28,
     this.velocity = 40,
   });
@@ -42,6 +44,7 @@ class AutoMarqueeText extends StatelessWidget {
           return Text(
             text,
             style: style,
+            textAlign: textAlign,
             maxLines: 1,
             softWrap: false,
             overflow: TextOverflow.ellipsis,

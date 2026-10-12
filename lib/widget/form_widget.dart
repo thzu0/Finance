@@ -1,6 +1,7 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/extentions/extentions.dart';
+import 'package:finance/widget/auto_marquee_text.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
@@ -471,25 +472,6 @@ class GlassOption {
   const GlassOption(this.icon, this.label);
 }
 
-const List<GlassOption> kExpenseCategories = [
-  GlassOption(Icons.restaurant, 'خورد و خوراک'),
-  GlassOption(Icons.directions_car, 'حمل و نقل'),
-  GlassOption(Icons.shopping_bag, 'خرید'),
-  GlassOption(Icons.movie, 'سرگرمی'),
-  GlassOption(Icons.health_and_safety, 'سلامت'),
-  GlassOption(Icons.receipt_long, 'قبض‌ها'),
-  GlassOption(Icons.school, 'آموزش'),
-  GlassOption(Icons.more_horiz, 'سایر'),
-];
-
-const List<GlassOption> kIncomeCategories = [
-  GlassOption(Icons.account_balance_wallet, 'حقوق'),
-  GlassOption(Icons.laptop_mac, 'فریلنس'),
-  GlassOption(Icons.card_giftcard, 'هدیه'),
-  GlassOption(Icons.trending_up, 'سرمایه‌گذاری'),
-  GlassOption(Icons.more_horiz, 'سایر'),
-];
-
 const List<GlassOption> kAccounts = [
   GlassOption(Icons.account_balance_wallet_outlined, 'کیف پول اصلی'),
   GlassOption(Icons.account_balance_outlined, 'حساب بانکی'),
@@ -572,12 +554,13 @@ Future<int?> showGlassOptionSheet(
                                 size: 28,
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                options[i].label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: glassText(14),
+                              SizedBox(
+                                width: double.infinity,
+                                child: AutoMarqueeText(
+                                  options[i].label,
+                                  style: glassText(14),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ],
                           ),
