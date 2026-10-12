@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/Constans/scaffold_background_page.dart';
@@ -121,6 +122,8 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
   bool _loading = true;
   int? _selectedIndex;
+  Timer? _tooltipTimer;
+  static const Duration _tooltipDuration = Duration(milliseconds: 1000);
   _PeriodData? _current;
 
   void _onSettings() {
@@ -137,6 +140,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
   @override
   void dispose() {
+    _tooltipTimer?.cancel();
     transactionsTicker.removeListener(_load);
     _s.changes.removeListener(_onSettings);
     super.dispose();
@@ -309,6 +313,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
+                    _tooltipTimer?.cancel();
                     setState(() {
                       _period = p;
                       _selectedIndex = null;
@@ -411,6 +416,42 @@ class _InsightsscreenState extends State<Insightsscreen> {
     );
   }
 
+  void _selectBar(int i) {
+    _tooltipTimer?.cancel();
+
+    if (_selectedIndex == i) {
+      setState(() => _selectedIndex = null);
+      return;
+    }
+
+    setState(() => _selectedIndex = i);
+
+    _tooltipTimer = Timer(_tooltipDuration, () {
+      if (mounted) setState(() => _selectedIndex = null);
+    });
+  }
+
+  Widget _buildBarTooltip(int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Constans.background.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _blue.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        _compactWithUnit(value),
+        maxLines: 1,
+        softWrap: false,
+        style: const TextStyle(
+          fontFamily: 'Lalezar',
+          fontSize: 12,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBarChart(_PeriodData d) {
     if (d.values.isEmpty || d.values.every((v) => v == 0)) {
       return Text(
@@ -425,11 +466,15 @@ class _InsightsscreenState extends State<Insightsscreen> {
 
     final maxV = d.values.reduce(math.max);
     final peak = d.peakIndex;
+    final active = (_selectedIndex != null && _selectedIndex! < d.values.length)
+        ? _selectedIndex!
+        : peak;
     final many = d.values.length > 7;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // هدر همون قبلیه و به peak وصله
         Text(
           'بیشترین: ${d.fullLabels[peak]} · ${_compactWithUnit(d.values[peak])}',
           style: TextStyle(
@@ -452,23 +497,18 @@ class _InsightsscreenState extends State<Insightsscreen> {
                   Expanded(
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => setState(() {
-                        // کلیک دوباره روی همون ستون، حباب رو می‌بنده
-                        _selectedIndex = _selectedIndex == i ? null : i;
-                      }),
+                      onTap: () => _selectBar(i),
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: many ? 3 : 6),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SizedBox(
-                              height:
-                                  _barAreaHeight + 34, // ۳۴ پیکسل جا برای حباب
+                              height: _barAreaHeight + 34,
                               child: Stack(
                                 alignment: Alignment.bottomCenter,
                                 clipBehavior: Clip.none,
                                 children: [
-                                  // خود ستون
                                   Align(
                                     alignment: Alignment.bottomCenter,
                                     child: Container(
@@ -478,12 +518,10 @@ class _InsightsscreenState extends State<Insightsscreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
-                                        color:
-                                            (i == peak || i == _selectedIndex)
+                                        color: i == active
                                             ? null
                                             : _blue.withValues(alpha: 0.28),
-                                        gradient:
-                                            (i == peak || i == _selectedIndex)
+                                        gradient: i == active
                                             ? const LinearGradient(
                                                 begin: Alignment.bottomCenter,
                                                 end: Alignment.topCenter,
@@ -493,7 +531,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
                                       ),
                                     ),
                                   ),
-                                  // حباب مبلغ (فقط برای ستون انتخاب‌شده)
                                   if (_selectedIndex == i)
                                     Positioned(
                                       bottom:
@@ -518,7 +555,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
                               style: TextStyle(
                                 fontFamily: 'Lalezar',
                                 fontSize: many ? 11 : 14,
-                                color: (i == peak || i == _selectedIndex)
+                                color: i == active
                                     ? Constans.textPrimary
                                     : Constans.textSecondary,
                               ),
@@ -533,27 +570,6 @@ class _InsightsscreenState extends State<Insightsscreen> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildBarTooltip(int value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Constans.background.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _blue.withValues(alpha: 0.6)),
-      ),
-      child: Text(
-        _compactWithUnit(value),
-        maxLines: 1,
-        softWrap: false,
-        style: const TextStyle(
-          fontFamily: 'Lalezar',
-          fontSize: 12,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 
