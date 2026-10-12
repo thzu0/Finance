@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 
 enum TxType { income, expense }
 
-enum _TxAction { changeCategory, delete }
+enum _TxAction { changeCategory, delete, save }
 
 enum _Period { all, today, week, month }
 
@@ -97,6 +97,7 @@ class _Tx {
   final String? detailBank;
   final String? accountLast4;
   final int? balanceAfterRial;
+  final String note; // توضیحات خام از دیتابیس
 
   const _Tx({
     required this.id,
@@ -115,6 +116,7 @@ class _Tx {
     this.detailBank,
     this.accountLast4,
     this.balanceAfterRial,
+    required this.note,
   });
 }
 
@@ -179,6 +181,11 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     super.dispose();
   }
 
+  Future<void> _saveNote(_Tx t, String note) async {
+    await updateTransactionNote(t.id, note);
+    // transactionsTicker خودش _loadTransactions رو صدا می‌زنه و لیست آپدیت می‌شه
+  }
+
   Future<void> _loadTransactions() async {
     final rows = await getAllTransactions();
     final now = DateTime.now();
@@ -227,6 +234,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
         category: c.name,
         amount: t.amount.toInt(),
         date: t.date,
+        note: note,
         time:
             '${t.date.hour.toString().padLeft(2, '0')}:${t.date.minute.toString().padLeft(2, '0')}',
         icon: icon,
@@ -703,16 +711,27 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   Future<void> _openDetailSheet(_Tx t) async {
     FocusScope.of(context).unfocus();
 
+    final noteCtrl = TextEditingController(text: t.isSms ? '' : t.note);
+
     final action = await showModalBottomSheet<_TxAction>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (ctx) => _buildDetailSheet(ctx, t),
+      builder: (ctx) => _buildDetailSheet(ctx, t, noteCtrl),
     );
+
+    final newNote = noteCtrl.text.trim();
+
+    // dispose رو بعد از تموم شدن انیمیشن بسته شدن شیت انجام بده
+    WidgetsBinding.instance.addPostFrameCallback((_) => noteCtrl.dispose());
 
     if (!mounted || action == null) return;
     switch (action) {
+      case _TxAction.save:
+        if (newNote != t.note.trim()) {
+          await updateTransactionNote(t.id, newNote);
+        }
       case _TxAction.changeCategory:
         await _changeCategory(t);
       case _TxAction.delete:
@@ -740,13 +759,13 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     await _loadTransactions();
     if (!mounted) return;
     showGlassSnack(context, 'دسته‌بندی تغییر کرد');
-
-    // باتم‌شیت با دسته‌ی جدید دوباره باز بشه
-    final updated = _items.where((x) => x.id == t.id).firstOrNull;
-    if (updated != null) await _openDetailSheet(updated);
   }
 
-  Widget _buildDetailSheet(BuildContext ctx, _Tx t) {
+  Widget _buildDetailSheet(
+    BuildContext ctx,
+    _Tx t,
+    TextEditingController noteCtrl,
+  ) {
     final isIncome = t.type == TxType.income;
     final color = isIncome ? _income : _expense;
     final bank = t.detailBank?.trim() ?? '';
@@ -779,6 +798,9 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(ctx).size.height * 0.82,
             ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ), // 👈 جدید
             decoration: BoxDecoration(
               color: Constans.surface.withValues(alpha: 0.82),
               border: Border(
@@ -885,6 +907,41 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                               ],
                             ),
                           ),
+
+                          const SizedBox(height: 14),
+                          GlassBox(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              child: TextField(
+                                controller: noteCtrl,
+                                maxLines: 4,
+                                minLines: 3,
+                                cursorColor: _blue,
+                                style: TextStyle(
+                                  fontFamily: 'Lalezar',
+                                  fontSize: 16,
+                                  color: Constans.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  icon: Icon(
+                                    Icons.edit_note_rounded,
+                                    color: Constans.textSecondary,
+                                  ),
+                                  hintText: 'توضیحات (اختیاری)',
+
+                                  hintStyle: TextStyle(
+                                    fontFamily: 'Lalezar',
+                                    fontSize: 16,
+                                    color: Constans.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -925,23 +982,23 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                         Expanded(
                           flex: 2,
                           child: GestureDetector(
-                            onTap: () => Navigator.pop(ctx, _TxAction.delete),
+                            onTap: () => Navigator.pop(ctx, _TxAction.save),
                             child: Container(
                               height: 54,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: _expense.withValues(alpha: 0.15),
+                                color: _income.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: _expense.withValues(alpha: 0.6),
+                                  color: _income.withValues(alpha: 0.6),
                                 ),
                               ),
                               child: const Text(
-                                'حذف',
+                                'ذخیره',
                                 style: TextStyle(
                                   fontFamily: 'Lalezar',
                                   fontSize: 18,
-                                  color: _expense,
+                                  color: _income,
                                 ),
                               ),
                             ),
@@ -1615,4 +1672,44 @@ class _FilterChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// نگه‌دارنده‌ی کنترلر توضیحات + ذخیره موقع بسته شدن شیت (با هر روشی)
+class _DetailSheetBody extends StatefulWidget {
+  final Widget Function(BuildContext, TextEditingController) buildSheet;
+  final String initialNote;
+  final Future<void> Function(String)? onSaveNote;
+
+  const _DetailSheetBody({
+    required this.buildSheet,
+    required this.initialNote,
+    required this.onSaveNote,
+  });
+
+  @override
+  State<_DetailSheetBody> createState() => _DetailSheetBodyState();
+}
+
+class _DetailSheetBodyState extends State<_DetailSheetBody> {
+  late final TextEditingController _ctrl = TextEditingController(
+    text: widget.initialNote,
+  );
+
+  @override
+  void dispose() {
+    final text = _ctrl.text.trim();
+    final save = widget.onSaveNote;
+    final changed = save != null && text != widget.initialNote.trim();
+
+    _ctrl.dispose();
+
+    if (changed) {
+      // setState وسط dispose مجاز نیست، پس بعد از فریم اجرا می‌شه
+      WidgetsBinding.instance.addPostFrameCallback((_) => save(text));
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.buildSheet(context, _ctrl);
 }

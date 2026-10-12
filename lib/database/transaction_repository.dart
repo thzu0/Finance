@@ -65,6 +65,14 @@ Future<void> updateTransactionCategory(int id, int categoryId) async {
   transactionsTicker.value++;
 }
 
+/// توضیحات (note) یه تراکنش رو عوض می‌کنه.
+Future<void> updateTransactionNote(int id, String note) async {
+  await (database.update(database.transactions)..where((t) => t.id.equals(id)))
+      .write(TransactionsCompanion(note: Value(note)));
+
+  transactionsTicker.value++;
+}
+
 /// پاک‌سازی یک‌باره: هر تراکنشی که تاریخش از الان جلوتره رو حذف می‌کنه.
 Future<int> cleanupFutureTransactions() async {
   final now = DateTime.now();
