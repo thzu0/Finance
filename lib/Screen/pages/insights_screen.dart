@@ -120,6 +120,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
   _Period _period = _Period.week;
 
   bool _loading = true;
+  int? _selectedIndex;
   _PeriodData? _current;
 
   void _onSettings() {
@@ -308,7 +309,10 @@ class _InsightsscreenState extends State<Insightsscreen> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    setState(() => _period = p);
+                    setState(() {
+                      _period = p;
+                      _selectedIndex = null;
+                    });
                     _load();
                   },
                   child: AnimatedContainer(
@@ -446,50 +450,81 @@ class _InsightsscreenState extends State<Insightsscreen> {
               children: [
                 for (var i = 0; i < d.values.length; i++)
                   Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: many ? 3 : 6),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            height: _barAreaHeight,
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                height: math.max(
-                                  4,
-                                  _barAreaHeight * d.values[i] / maxV * t,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: i == peak
-                                      ? null
-                                      : _blue.withValues(alpha: 0.28),
-                                  gradient: i == peak
-                                      ? const LinearGradient(
-                                          begin: Alignment.bottomCenter,
-                                          end: Alignment.topCenter,
-                                          colors: [_blue, _purple],
-                                        )
-                                      : null,
-                                ),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() {
+                        // کلیک دوباره روی همون ستون، حباب رو می‌بنده
+                        _selectedIndex = _selectedIndex == i ? null : i;
+                      }),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: many ? 3 : 6),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height:
+                                  _barAreaHeight + 34, // ۳۴ پیکسل جا برای حباب
+                              child: Stack(
+                                alignment: Alignment.bottomCenter,
+                                clipBehavior: Clip.none,
+                                children: [
+                                  // خود ستون
+                                  Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: Container(
+                                      height: math.max(
+                                        4,
+                                        _barAreaHeight * d.values[i] / maxV * t,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        color:
+                                            (i == peak || i == _selectedIndex)
+                                            ? null
+                                            : _blue.withValues(alpha: 0.28),
+                                        gradient:
+                                            (i == peak || i == _selectedIndex)
+                                            ? const LinearGradient(
+                                                begin: Alignment.bottomCenter,
+                                                end: Alignment.topCenter,
+                                                colors: [_blue, _purple],
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  // حباب مبلغ (فقط برای ستون انتخاب‌شده)
+                                  if (_selectedIndex == i)
+                                    Positioned(
+                                      bottom:
+                                          math.max(
+                                            4,
+                                            _barAreaHeight *
+                                                d.values[i] /
+                                                maxV *
+                                                t,
+                                          ) +
+                                          6,
+                                      child: _buildBarTooltip(d.values[i]),
+                                    ),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            d.labels[i],
-                            maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            style: TextStyle(
-                              fontFamily: 'Lalezar',
-                              fontSize: many ? 11 : 14,
-                              color: i == peak
-                                  ? Constans.textPrimary
-                                  : Constans.textSecondary,
+                            const SizedBox(height: 8),
+                            Text(
+                              d.labels[i],
+                              maxLines: 1,
+                              overflow: TextOverflow.clip,
+                              style: TextStyle(
+                                fontFamily: 'Lalezar',
+                                fontSize: many ? 11 : 14,
+                                color: (i == peak || i == _selectedIndex)
+                                    ? Constans.textPrimary
+                                    : Constans.textSecondary,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -498,6 +533,27 @@ class _InsightsscreenState extends State<Insightsscreen> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildBarTooltip(int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Constans.background.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _blue.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        _compactWithUnit(value),
+        maxLines: 1,
+        softWrap: false,
+        style: const TextStyle(
+          fontFamily: 'Lalezar',
+          fontSize: 12,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
