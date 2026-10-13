@@ -12,6 +12,10 @@ import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
+import 'package:finance/widget/app_tour.dart';
+import 'package:finance/widget/tab_notifier.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+
 class _ProfileOption {
   final IconData icon;
   final String title;
@@ -36,6 +40,9 @@ class Profilescreen extends StatefulWidget {
 
 class _ProfilescreenState extends State<Profilescreen> {
   final _s = AppSettings.instance;
+  final _settingsKey = GlobalKey();
+  final _headerKey = GlobalKey();
+  final _optionsKey = GlobalKey();
 
   late String _name = _s.get<String>('name', 'بدون نام');
   late String _email = _s.get<String>('email', 'email@example.com');
@@ -44,12 +51,52 @@ class _ProfilescreenState extends State<Profilescreen> {
   void initState() {
     super.initState();
     _s.changes.addListener(_onSettingsChanged);
+    activeTab.addListener(_onTabChanged);
   }
 
   @override
   void dispose() {
     _s.changes.removeListener(_onSettingsChanged);
+    activeTab.removeListener(_onTabChanged);
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (activeTab.value == 4) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
+    }
+  }
+
+  Future<void> _maybeStartTour() async {
+    if (!mounted || activeTab.value != 4 || _s.tourSeen('profile')) return;
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted || activeTab.value != 4) return;
+
+    AppTour.showOnce(
+      context,
+      page: 'profile',
+      seen: _s.tourSeen('profile'),
+      isMounted: () => mounted,
+      markSeen: () => _s.setTourSeen('profile'),
+      steps: [
+        TourStep(
+          _settingsKey,
+          'تنظیمات برنامه',
+          'واحد پول، نوع ارقام، مخفی کردن مبالغ، خواندن خودکار پیامک و خروجی PDF اینجاست. گزینه‌ی «نمایش دوباره‌ی آموزش» هم همین‌جاست.',
+        ),
+        TourStep(
+          _headerKey,
+          'پروفایل تو',
+          'اسم و ایمیلی که توی بخش «حساب کاربری و امنیت» وارد کردی اینجا نمایش داده می‌شه.',
+        ),
+        TourStep(
+          _optionsKey,
+          'بخش‌های دیگه',
+          'امنیت حساب، اعلان‌ها، کارت‌های بانکی (برای خواندن پیامک لازمه)، راهنما و درباره‌ی ما.',
+          align: ContentAlign.top,
+        ),
+      ],
+    );
   }
 
   void _onSettingsChanged() {
@@ -140,6 +187,7 @@ class _ProfilescreenState extends State<Profilescreen> {
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
           child: IconButton(
+            key: _settingsKey,
             onPressed: () {
               Navigator.push(
                 context,
@@ -184,9 +232,12 @@ class _ProfilescreenState extends State<Profilescreen> {
               textDirection: TextDirection.rtl,
               child: Column(
                 children: <Widget>[
-                  _buildHeader(),
+                  KeyedSubtree(key: _headerKey, child: _buildHeader()),
                   const SizedBox(height: 40),
-                  _buildOptionsCard(options),
+                  KeyedSubtree(
+                    key: _optionsKey,
+                    child: _buildOptionsCard(options),
+                  ),
                   const SizedBox(height: 110),
                 ],
               ),
