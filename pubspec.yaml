@@ -35,6 +35,9 @@ dependencies:
    
   flutter_timezone: ^5.1.1
   shared_preferences: ^2.2.2
+  # گزارش PDF
+  pdf: ^3.11.0
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +67,8 @@ flutter:
     - family: Vazirmatn
       fonts:
         - asset: assets/fonts/Vazirmatn-RD-Regular.ttf
+        - asset: assets/fonts/Vazirmatn-RD-Bold.ttf
+          weight: 700
 
 # ⬇️ این بلاک جدید برای آیکون اپ
 flutter_launcher_icons:

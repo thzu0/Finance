@@ -110,6 +110,36 @@ Future<List<TransactionWithCategory>> getAllTransactions() async {
   }).toList();
 }
 
+/// تراکنش‌های بازه‌ی [start, end) همراه با دسته‌بندی، جدیدترین اول
+Future<List<TransactionWithCategory>> getTransactionsInRange(
+  DateTime start,
+  DateTime end,
+) async {
+  final query =
+      database.select(database.transactions).join([
+          innerJoin(
+            database.categories,
+            database.categories.id.equalsExp(database.transactions.categoryId),
+          ),
+        ])
+        ..where(database.transactions.date.isBiggerOrEqualValue(start))
+        ..where(database.transactions.date.isSmallerThanValue(end))
+        ..orderBy([
+          OrderingTerm.desc(database.transactions.date),
+          OrderingTerm.desc(database.transactions.id),
+        ]);
+
+  final rows = await query.get();
+  return rows
+      .map(
+        (row) => TransactionWithCategory(
+          row.readTable(database.transactions),
+          row.readTable(database.categories),
+        ),
+      )
+      .toList();
+}
+
 // ─────────────────────────────────────────────
 // 🆕 آفست موجودی (برای کاربرهایی که خوندن پیامک روشنه)
 // ─────────────────────────────────────────────

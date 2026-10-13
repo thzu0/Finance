@@ -1,8 +1,10 @@
 import 'package:finance/Constans/constans.dart';
 import 'package:finance/database/app_setting.dart';
 import 'package:finance/database/card_service.dart';
+import 'package:finance/services/pdf_report_service.dart';
 import 'package:finance/services/sms_permission.dart';
 import 'package:finance/services/sms_sync_service.dart';
+import 'package:finance/widget/form_widget.dart';
 import 'package:finance/widget/glass_box_widget.dart';
 
 import 'package:flutter/material.dart';
@@ -35,6 +37,31 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
     final stillGranted = await SmsPermissionService.isStillGranted();
     if (!mounted) return;
     setState(() => _smsEnabled = stillGranted);
+  }
+
+  Future<void> _exportPdf() async {
+    final i = await showGlassOptionSheet(
+      context,
+      title: 'بازه‌ی گزارش',
+      options: const [
+        GlassOption(Icons.calendar_month_outlined, 'این ماه'),
+        GlassOption(Icons.history, 'ماه گذشته'),
+        GlassOption(Icons.date_range_outlined, '۳ ماه اخیر'),
+        GlassOption(Icons.all_inclusive, 'همه'),
+      ],
+    );
+    if (i == null || !mounted) return;
+
+    showGlassSnack(context, 'در حال ساختن PDF…');
+    try {
+      final ok = await PdfReportService.exportAndShare(PdfRange.values[i]);
+      if (!mounted) return;
+      if (!ok) showGlassSnack(context, 'توی این بازه تراکنشی نیست');
+    } catch (e) {
+      debugPrint('PDF export failed: $e');
+      if (!mounted) return;
+      showGlassSnack(context, 'ساخت PDF ناموفق بود');
+    }
   }
 
   Future<void> _toggleSms(bool enable) async {
@@ -177,10 +204,7 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
               icon: Icons.picture_as_pdf_outlined,
               title: 'خروجی گزارش (PDF)',
               subtitle: 'گردش مالی‌ت رو به‌صورت فایل PDF بگیر',
-              onTap: () {
-                // TODO: ساخت PDF
-                showGlassSnack(context, 'این قابلیت به‌زودی اضافه می‌شه');
-              },
+              onTap: _exportPdf,
             ),
           ],
         ),
