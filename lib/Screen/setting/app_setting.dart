@@ -129,16 +129,7 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
                 await _s.set('currency', i);
               },
             ),
-            _SegmentSetting(
-              icon: Icons.language,
-              title: 'زبان',
-              labels: const ['فارسی', 'English'],
-              selected: _language,
-              onChanged: (i) {
-                setState(() => _language = i);
-                // TODO: منطق تغییر زبان
-              },
-            ),
+
             _SegmentSetting(
               icon: Icons.pin_outlined,
               title: 'نوع ارقام',
