@@ -13,6 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:finance/services/notification_service.dart';
 import 'package:page_transition/page_transition.dart';
 
+import 'package:finance/widget/app_tour.dart';
+import 'package:finance/widget/tab_notifier.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,16 +28,75 @@ class _HomeScreenState extends State<HomeScreen> {
   final _s = AppSettings.instance;
   late String _name = _s.get<String>('name', 'بدون نام');
 
+  final _bellKey = GlobalKey();
+  final _balanceKey = GlobalKey();
+  final _actionsKey = GlobalKey();
+  final _monthKey = GlobalKey();
+  final _spendingKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     _s.changes.addListener(_onSettingsChanged);
+    activeTab.addListener(_onTabChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
   }
 
   @override
   void dispose() {
     _s.changes.removeListener(_onSettingsChanged);
+    activeTab.removeListener(_onTabChanged);
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (activeTab.value == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
+    }
+  }
+
+  Future<void> _maybeStartTour() async {
+    if (!mounted || activeTab.value != 0 || _s.tourSeen('home')) return;
+    // صبر کن داده‌های خانه لود بشن و کارت‌ها ساخته بشن
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted || activeTab.value != 0) return;
+
+    AppTour.showOnce(
+      context,
+      page: 'home',
+      seen: _s.tourSeen('home'),
+      isMounted: () => mounted,
+      markSeen: () => _s.setTourSeen('home'),
+      steps: [
+        TourStep(
+          _bellKey,
+          'اعلان‌ها',
+          'هشدارهای بودجه و تراکنش‌های ثبت‌شده‌ی خودکار اینجا جمع می‌شن. عدد قرمز تعداد خوانده‌نشده‌هاست.',
+        ),
+        TourStep(
+          _balanceKey,
+          'موجودی کل',
+          'مجموع موجودی‌ت و تغییرش نسبت به اول ماه. با آیکون چشم می‌تونی مبلغ‌ها رو مخفی کنی.',
+        ),
+        TourStep(
+          _actionsKey,
+          'ثبت سریع',
+          'از اینجا بودجه تعیین کن یا هزینه و درآمد جدید ثبت کن.',
+        ),
+        TourStep(
+          _monthKey,
+          'خلاصه‌ی این ماه',
+          'درآمد، هزینه و پس‌انداز ماه جاری، همراه با مقایسه با ماه قبل.',
+          align: ContentAlign.top,
+        ),
+        TourStep(
+          _spendingKey,
+          'بررسی هزینه‌ها',
+          'نمودار نشون می‌ده بیشتر پولت کجا خرج شده.',
+          align: ContentAlign.top,
+        ),
+      ],
+    );
   }
 
   void _onSettingsChanged() {
@@ -69,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: <Widget>[
           Padding(
             padding: const EdgeInsets.only(left: 15),
-            child: Row(children: [_NotificationBell()]),
+            child: Row(children: [_NotificationBell(key: _bellKey)]),
           ),
           const Spacer(),
 
@@ -121,13 +184,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ///Content after App Bar
       ///=============================
       body: AppGlowBackground(
-        child: SafeArea(child: BuildHomePage(size: size)),
+        child: SafeArea(
+          child: BuildHomePage(
+            size: size,
+            balanceKey: _balanceKey,
+            actionsKey: _actionsKey,
+            monthKey: _monthKey,
+            spendingKey: _spendingKey,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _NotificationBell extends StatelessWidget {
+  const _NotificationBell({super.key});
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(

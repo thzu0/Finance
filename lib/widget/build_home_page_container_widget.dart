@@ -22,9 +22,20 @@ import 'package:page_transition/page_transition.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 class BuildHomePage extends StatefulWidget {
-  const BuildHomePage({super.key, required this.size});
+  const BuildHomePage({
+    super.key,
+    required this.size,
+    this.balanceKey,
+    this.actionsKey,
+    this.monthKey,
+    this.spendingKey,
+  });
 
   final Size size;
+  final GlobalKey? balanceKey;
+  final GlobalKey? actionsKey;
+  final GlobalKey? monthKey;
+  final GlobalKey? spendingKey;
 
   @override
   State<BuildHomePage> createState() => _BuildHomePageState();
@@ -133,146 +144,149 @@ class _BuildHomePageState extends State<BuildHomePage> {
     return SingleChildScrollView(
       child: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 20.0,
-            ),
-            child: Container(
-              width: size.width,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3FA8),
-                    Color(0xFF1B357F),
-                    Color(0xFF17307F),
-                    Color(0xFF14286F),
-                    Color(0xFF12206B),
-                    Color(0xFF0A1548),
-                    Color(0xFF080D24),
-                  ],
-                  stops: [0.1, 0.15, 0.35, 0.6, 0.7, 0.85, 1.0],
-                ),
-                borderRadius: BorderRadius.circular(24.0),
+          KeyedSubtree(
+            key: widget.balanceKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 20.0,
               ),
-              // ← دیگه Stack نیست: یه Column ساده که خودش بر اساس
-              // محتوای واقعی‌ش ارتفاع می‌گیره. هیچ عدد فرضی (مثل
-              // درصدهای قبلی 0.165 یا 0.22) لازم نیست.
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      GestureDetector(
-                        onTap: _toggleHide,
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            _hide
-                                ? Icons.visibility_off_outlined
-                                : Icons.remove_red_eye_outlined,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'موجودی کل',
-                        textDirection: TextDirection.rtl,
-                        style: TextStyle(
-                          fontFamily: 'Vazirmatn',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: Constans.textPrimary,
-                        ),
-                      ),
+              child: Container(
+                width: size.width,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1E3FA8),
+                      Color(0xFF1B357F),
+                      Color(0xFF17307F),
+                      Color(0xFF14286F),
+                      Color(0xFF12206B),
+                      Color(0xFF0A1548),
+                      Color(0xFF080D24),
                     ],
+                    stops: [0.1, 0.15, 0.35, 0.6, 0.7, 0.85, 1.0],
                   ),
-                  const SizedBox(height: 6),
-                  // ← مبلغ حالا عرض کامل کارت رو داره (چارت دیگه
-                  // کنارش نیست)، پس FittedBox همیشه فضای زیادی برای
-                  // جا شدن داره، حتی برای اعداد خیلی بزرگ.
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          height: 36,
-                          child: CurrencyMark(color: 'white', height: 45),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _loading ? '...' : showAmount(_balance.round()),
-                          textDirection: TextDirection.rtl,
-                          style: TextStyle(
-                            fontFamily: 'Vazirmatn',
-                            color: Colors.white,
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!_loading && _balanceChangePercent > 0) ...[
-                    const SizedBox(height: 6),
+                  borderRadius: BorderRadius.circular(24.0),
+                ),
+                // ← دیگه Stack نیست: یه Column ساده که خودش بر اساس
+                // محتوای واقعی‌ش ارتفاع می‌گیره. هیچ عدد فرضی (مثل
+                // درصدهای قبلی 0.165 یا 0.22) لازم نیست.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          'نسبت به اول ماه',
-                          style: TextStyle(
-                            color: _balanceUp
-                                ? Constans.success
-                                : Constans.expense,
-                            fontFamily: 'Vazirmatn',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w300,
+                        GestureDetector(
+                          onTap: _toggleHide,
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              _hide
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.remove_red_eye_outlined,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
-                          '%${_balanceChangePercent.round()}'.farsiNumber,
+                          'موجودی کل',
+                          textDirection: TextDirection.rtl,
                           style: TextStyle(
                             fontFamily: 'Vazirmatn',
-                            color: _balanceUp
-                                ? Constans.success
-                                : Constans.expense,
-                            fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Constans.textPrimary,
                           ),
-                        ),
-                        const SizedBox(width: 3),
-                        Icon(
-                          _balanceUp
-                              ? Icons.arrow_circle_up
-                              : Icons.arrow_circle_down,
-                          color: _balanceUp
-                              ? Constans.success
-                              : Constans.expense,
-                          size: 16,
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    // ← مبلغ حالا عرض کامل کارت رو داره (چارت دیگه
+                    // کنارش نیست)، پس FittedBox همیشه فضای زیادی برای
+                    // جا شدن داره، حتی برای اعداد خیلی بزرگ.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            height: 36,
+                            child: CurrencyMark(color: 'white', height: 45),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _loading ? '...' : showAmount(_balance.round()),
+                            textDirection: TextDirection.rtl,
+                            style: TextStyle(
+                              fontFamily: 'Vazirmatn',
+                              color: Colors.white,
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_loading && _balanceChangePercent > 0) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'نسبت به اول ماه',
+                            style: TextStyle(
+                              color: _balanceUp
+                                  ? Constans.success
+                                  : Constans.expense,
+                              fontFamily: 'Vazirmatn',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '%${_balanceChangePercent.round()}'.farsiNumber,
+                            style: TextStyle(
+                              fontFamily: 'Vazirmatn',
+                              color: _balanceUp
+                                  ? Constans.success
+                                  : Constans.expense,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Icon(
+                            _balanceUp
+                                ? Icons.arrow_circle_up
+                                : Icons.arrow_circle_down,
+                            color: _balanceUp
+                                ? Constans.success
+                                : Constans.expense,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    // ← چارت دیگه Positioned/overlap نیست؛ یه ردیف جدا
+                    // زیر بخش موجودی، با ارتفاع ثابت و عرض کامل.
+                    SizedBox(
+                      height: 60,
+                      width: double.infinity,
+                      child: FlChart(points: _trend),
+                    ),
                   ],
-                  const SizedBox(height: 10),
-                  // ← چارت دیگه Positioned/overlap نیست؛ یه ردیف جدا
-                  // زیر بخش موجودی، با ارتفاع ثابت و عرض کامل.
-                  SizedBox(
-                    height: 60,
-                    width: double.infinity,
-                    child: FlChart(points: _trend),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -280,124 +294,133 @@ class _BuildHomePageState extends State<BuildHomePage> {
           ///=============================
           ///Action button
           ///=============================
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                BuildActionButton(
-                  label: 'تعیین بودجه',
-                  color: Constans.purple,
-                  icon: Icons.calendar_today_outlined,
-                  press: () => Navigator.push(
-                    context,
-                    PageTransition(
-                      child: const SetBudgetScreen(),
-                      type: PageTransitionType.fade,
+          KeyedSubtree(
+            key: widget.actionsKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  BuildActionButton(
+                    label: 'تعیین بودجه',
+                    color: Constans.purple,
+                    icon: Icons.calendar_today_outlined,
+                    press: () => Navigator.push(
+                      context,
+                      PageTransition(
+                        child: const SetBudgetScreen(),
+                        type: PageTransitionType.fade,
+                      ),
                     ),
                   ),
-                ),
-                BuildActionButton(
-                  label: 'افزودن هزینه',
-                  color: Constans.expense,
-                  icon: Icons.remove,
-                  press: () => Navigator.push(
-                    context,
-                    PageTransition(
-                      child: const AddTransactionScreen(initialTab: 0),
-                      type: PageTransitionType.fade,
+                  BuildActionButton(
+                    label: 'افزودن هزینه',
+                    color: Constans.expense,
+                    icon: Icons.remove,
+                    press: () => Navigator.push(
+                      context,
+                      PageTransition(
+                        child: const AddTransactionScreen(initialTab: 0),
+                        type: PageTransitionType.fade,
+                      ),
                     ),
                   ),
-                ),
-                BuildActionButton(
-                  label: 'افزودن درآمد',
-                  color: Constans.success,
-                  icon: Icons.add,
-                  press: () => Navigator.push(
-                    context,
-                    PageTransition(
-                      child: const AddTransactionScreen(initialTab: 1),
-                      type: PageTransitionType.fade,
+                  BuildActionButton(
+                    label: 'افزودن درآمد',
+                    color: Constans.success,
+                    icon: Icons.add,
+                    press: () => Navigator.push(
+                      context,
+                      PageTransition(
+                        child: const AddTransactionScreen(initialTab: 1),
+                        type: PageTransitionType.fade,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
           ///=======================================
           /// This month container
           ///=======================================
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 10.0,
-            ),
-            child: Container(
-              constraints: BoxConstraints(minHeight: size.height * 0.2),
-              padding: const EdgeInsets.all(14),
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Constans.border.withValues(alpha: 0.45),
-                  width: 0.85,
-                ),
-                color: Constans.surface,
-                borderRadius: BorderRadius.circular(20),
+          KeyedSubtree(
+            key: widget.monthKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 10.0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Text(
-                      'این ماه',
-                      style: TextStyle(
-                        fontFamily: 'Vazirmatn',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Constans.textPrimary,
+              child: Container(
+                constraints: BoxConstraints(minHeight: size.height * 0.2),
+                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Constans.border.withValues(alpha: 0.45),
+                    width: 0.85,
+                  ),
+                  color: Constans.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Text(
+                        'این ماه',
+                        style: TextStyle(
+                          fontFamily: 'Vazirmatn',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Constans.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: MonthOverviewCard(
-                          icon: Icons.trending_up,
-                          label: 'درآمد',
-                          amount: showAmount(_income.round()),
-                          percent: '%${_incomePercent.abs()}'.farsiNumber,
-                          isPositive: _incomeUp,
-                          accentColor: Constans.success,
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MonthOverviewCard(
+                            icon: Icons.trending_up,
+                            label: 'درآمد',
+                            amount: showAmount(_income.round()),
+                            percent: '%${_incomePercent.abs()}'.farsiNumber,
+                            isPositive: _incomeUp,
+                            accentColor: Constans.success,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: MonthOverviewCard(
-                          icon: Icons.trending_down,
-                          label: 'هزینه',
-                          amount: showAmount(_expense.round()),
-                          percent: '%${_expensePercent.abs()}'.farsiNumber,
-                          isPositive: _expenseUp,
-                          accentColor: Constans.expense,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: MonthOverviewCard(
+                            icon: Icons.trending_down,
+                            label: 'هزینه',
+                            amount: showAmount(_expense.round()),
+                            percent: '%${_expensePercent.abs()}'.farsiNumber,
+                            isPositive: _expenseUp,
+                            accentColor: Constans.expense,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: MonthOverviewCard(
-                          icon: Icons.savings_outlined,
-                          label: 'پس‌انداز',
-                          amount: showAmount(_savings.round()),
-                          percent: '%${_savingsPercent.abs()}'.farsiNumber,
-                          isPositive: _savingsUp,
-                          accentColor: Constans.electricBlue,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: MonthOverviewCard(
+                            icon: Icons.savings_outlined,
+                            label: 'پس‌انداز',
+                            amount: showAmount(_savings.round()),
+                            percent: '%${_savingsPercent.abs()}'.farsiNumber,
+                            isPositive: _savingsUp,
+                            accentColor: Constans.electricBlue,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -405,64 +428,70 @@ class _BuildHomePageState extends State<BuildHomePage> {
           ///============================
           ///Container of chart Home page
           ///============================
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 0),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Constans.border.withValues(alpha: 0.45),
-                  width: 0.85,
-                ),
-                color: Constans.surface,
-                borderRadius: BorderRadius.circular(20),
+          KeyedSubtree(
+            key: widget.spendingKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Text(
-                      'بررسی هزینه‌ها',
-                      style: TextStyle(
-                        fontFamily: 'Vazirmatn',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Constans.textPrimary,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Constans.border.withValues(alpha: 0.45),
+                    width: 0.85,
+                  ),
+                  color: Constans.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Text(
+                        'بررسی هزینه‌ها',
+                        style: TextStyle(
+                          fontFamily: 'Vazirmatn',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Constans.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  _spendingCategories.isEmpty
-                      ? SizedBox(
-                          height: 180,
-                          width: double.infinity,
-                          child: Center(
-                            child: Text(
-                              'هنوز هزینه‌ای ثبت نشده',
-                              style: TextStyle(
-                                fontFamily: 'Vazirmatn',
-                                color: Constans.textSecondary,
-                                fontSize: 15,
+                    _spendingCategories.isEmpty
+                        ? SizedBox(
+                            height: 180,
+                            width: double.infinity,
+                            child: Center(
+                              child: Text(
+                                'هنوز هزینه‌ای ثبت نشده',
+                                style: TextStyle(
+                                  fontFamily: 'Vazirmatn',
+                                  color: Constans.textSecondary,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
+                          )
+                        : Builder(
+                            builder: (_) {
+                              final (value, unit) = centerAmountParts(
+                                _expense.round(),
+                              );
+                              return SpendingOverview(
+                                centerValue: _loading ? '...' : value,
+                                centerUnit: _loading ? '' : unit,
+                                categories: _spendingCategories,
+                              );
+                            },
                           ),
-                        )
-                      : Builder(
-                          builder: (_) {
-                            final (value, unit) = centerAmountParts(
-                              _expense.round(),
-                            );
-                            return SpendingOverview(
-                              centerValue: _loading ? '...' : value,
-                              centerUnit: _loading ? '' : unit,
-                              categories: _spendingCategories,
-                            );
-                          },
-                        ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
