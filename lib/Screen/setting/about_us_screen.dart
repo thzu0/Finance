@@ -8,9 +8,8 @@ import 'package:flutter/material.dart';
 class Aboutscreen extends StatelessWidget {
   const Aboutscreen({super.key});
 
-  // TODO: اسم و نسخه‌ی واقعی برنامه
   static const String _appName = 'نوکسا';
-  static const String _version = '1.0.0';
+  static const String _version = '1.0.1';
 
   @override
   Widget build(BuildContext context) {
@@ -93,11 +92,10 @@ class Aboutscreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'ساخته‌شده با عشق',
+              ' ساخته‌شده  بدست  Th_zu0',
               style: glassText(14, color: Constans.textSecondary),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.favorite, color: kDanger, size: 16),
           ],
         ),
         const SizedBox(height: 4),

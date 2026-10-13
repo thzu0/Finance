@@ -181,10 +181,10 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     super.dispose();
   }
 
-  Future<void> _saveNote(_Tx t, String note) async {
-    await updateTransactionNote(t.id, note);
-    // transactionsTicker خودش _loadTransactions رو صدا می‌زنه و لیست آپدیت می‌شه
-  }
+  // Future<void> _saveNote(_Tx t, String note) async {
+  //   await updateTransactionNote(t.id, note);
+  //   // transactionsTicker خودش _loadTransactions رو صدا می‌زنه و لیست آپدیت می‌شه
+  // }
 
   Future<void> _loadTransactions() async {
     final rows = await getAllTransactions();

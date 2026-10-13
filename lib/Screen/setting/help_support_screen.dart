@@ -8,11 +8,9 @@ import 'package:flutter/services.dart';
 class Helpsupportscreen extends StatelessWidget {
   const Helpsupportscreen({super.key});
 
-  // TODO: آدرس‌های واقعی پشتیبانی رو بذار
-  static const String _supportEmail = 'support@minty.app';
-  static const String _supportTelegram = '@minty_support';
+  static const String _supportEmail = 'Taha.n.j01511@gmail.com';
+  static const String _supportTelegram = '@Th_zu0';
 
-  // TODO: متن جواب‌ها رو با رفتار واقعی اپ هماهنگ کن
   static const List<(String, String)> _faq = [
     (
       'چطور یه تراکنش جدید ثبت کنم؟',
