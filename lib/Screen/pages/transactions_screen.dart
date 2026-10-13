@@ -13,6 +13,10 @@ import 'package:finance/widget/form_widget.dart'; // showAmount
 import 'package:finance/widget/glass_box_widget.dart';
 import 'package:flutter/material.dart';
 
+import 'package:finance/widget/app_tour.dart';
+import 'package:finance/widget/tab_notifier.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+
 enum TxType { income, expense }
 
 enum _TxAction { changeCategory, delete, save }
@@ -133,10 +137,62 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
   static const Color _expense = Color(0xFFFF5470);
 
   final _s = AppSettings.instance;
+  final _filterKey = GlobalKey();
+  final _searchKey = GlobalKey();
+  final _tabsKey = GlobalKey();
+  final _firstRowKey = GlobalKey();
 
   // وقتی تنظیمات (واحد پول، مخفی‌کردن مبالغ) عوض بشه، صفحه دوباره ساخته میشه
   void _onSettings() {
     if (mounted) setState(() {});
+  }
+
+  void _onTabChanged() {
+    if (activeTab.value == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
+    }
+  }
+
+  Future<void> _maybeStartTour() async {
+    if (!mounted || activeTab.value != 1 || _s.tourSeen('transactions')) return;
+    // صبر کن لود تموم بشه و ویجت‌ها ساخته بشن
+    for (var i = 0; i < 20 && _loading; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+    if (!mounted || activeTab.value != 1) return;
+
+    AppTour.showOnce(
+      context,
+      page: 'transactions',
+      seen: _s.tourSeen('transactions'),
+      isMounted: () => mounted,
+      markSeen: () => _s.setTourSeen('transactions'),
+      steps: [
+        TourStep(
+          _filterKey,
+          'فیلتر و مرتب‌سازی',
+          'تراکنش‌ها رو بر اساس بازه‌ی زمانی، دسته‌بندی و مبلغ فیلتر یا مرتب کن. عدد روی دکمه تعداد فیلترهای فعاله.',
+        ),
+        TourStep(
+          _searchKey,
+          'جستجو',
+          'توی عنوان، دسته یا مبلغ تراکنش‌ها جستجو کن.',
+        ),
+        TourStep(
+          _tabsKey,
+          'همه، درآمد، هزینه',
+          'با این تب‌ها فقط درآمدها یا فقط هزینه‌ها رو ببین.',
+        ),
+        if (_items.isNotEmpty)
+          TourStep(
+            _firstRowKey,
+            'ردیف تراکنش',
+            'برای دیدن جزئیات، تغییر دسته‌بندی یا نوشتن توضیحات روش بزن. برای حذف، نگه‌دار.',
+            align: ContentAlign.top,
+          ),
+      ],
+    );
   }
 
   // 0 = همه ، 1 = درآمد ، 2 = هزینه
@@ -170,6 +226,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     // خودکار دوباره از دیتابیس می‌خونه.
     transactionsTicker.addListener(_loadTransactions);
     _s.changes.addListener(_onSettings);
+    activeTab.addListener(_onTabChanged);
   }
 
   @override
@@ -178,13 +235,9 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
     _s.changes.removeListener(_onSettings);
     _searchCtrl.dispose();
     _searchFocus.dispose();
+    activeTab.removeListener(_onTabChanged);
     super.dispose();
   }
-
-  // Future<void> _saveNote(_Tx t, String note) async {
-  //   await updateTransactionNote(t.id, note);
-  //   // transactionsTicker خودش _loadTransactions رو صدا می‌زنه و لیست آپدیت می‌شه
-  // }
 
   Future<void> _loadTransactions() async {
     final rows = await getAllTransactions();
@@ -329,6 +382,13 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
         break;
     }
     return list;
+  }
+
+  /// اولین ردیفی که روی صفحه نشون داده می‌شه (برای تور)
+  bool _isFirstVisible(_Tx t) {
+    final today = _filtered(true);
+    final first = today.isNotEmpty ? today.first : _filtered(false).firstOrNull;
+    return first != null && first.id == t.id;
   }
 
   void _clearSearchAndFilters() {
@@ -1092,7 +1152,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
                     children: <Widget>[
                       _buildSearchRow(),
                       const SizedBox(height: 25),
-                      _buildTabBar(),
+                      KeyedSubtree(key: _tabsKey, child: _buildTabBar()),
                       _buildActiveFilters(),
                       const SizedBox(height: 5),
                       if (_items.isEmpty)
@@ -1197,17 +1257,20 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              GlassBox(
-                height: 52,
-                width: 52,
-                child: IconButton(
-                  onPressed: _openFilterSheet,
-                  tooltip: 'فیلتر',
-                  icon: Icon(
-                    Icons.tune,
-                    color: active > 0
-                        ? _blue
-                        : Constans.textPrimary.withValues(alpha: 0.9),
+              KeyedSubtree(
+                key: _filterKey,
+                child: GlassBox(
+                  height: 52,
+                  width: 52,
+                  child: IconButton(
+                    onPressed: _openFilterSheet,
+                    tooltip: 'فیلتر',
+                    icon: Icon(
+                      Icons.tune,
+                      color: active > 0
+                          ? _blue
+                          : Constans.textPrimary.withValues(alpha: 0.9),
+                    ),
                   ),
                 ),
               ),
@@ -1240,66 +1303,69 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: GlassBox(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: <Widget>[
-                  // دکمه‌ی پاک کردن متن
-                  if (_query.isNotEmpty)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        _searchCtrl.clear();
-                        setState(() {});
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 20,
-                          color: Constans.textSecondary,
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: TextField(
-                        controller: _searchCtrl,
-                        focusNode: _searchFocus,
-                        textAlign: TextAlign.start,
-                        cursorColor: _blue,
-                        textInputAction: TextInputAction.search,
-                        onChanged: (_) => setState(() {}),
-                        onSubmitted: (_) => _searchFocus.unfocus(),
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.only(right: 5.0),
-                          hintText: 'جستجو در عنوان، دسته یا مبلغ...',
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(
-                            fontFamily: 'Lalezar',
-                            fontSize: 15,
-                            color: Constans.textSecondary.withValues(
-                              alpha: 0.8,
-                            ),
+            child: KeyedSubtree(
+              key: _searchKey,
+              child: GlassBox(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: <Widget>[
+                    // دکمه‌ی پاک کردن متن
+                    if (_query.isNotEmpty)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          _searchCtrl.clear();
+                          setState(() {});
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 20,
+                            color: Constans.textSecondary,
                           ),
                         ),
-                        style: TextStyle(
-                          fontFamily: 'Lalezar',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 18.0,
-                          color: Constans.textPrimary,
+                      ),
+                    Expanded(
+                      child: Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: TextField(
+                          controller: _searchCtrl,
+                          focusNode: _searchFocus,
+                          textAlign: TextAlign.start,
+                          cursorColor: _blue,
+                          textInputAction: TextInputAction.search,
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (_) => _searchFocus.unfocus(),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.only(right: 5.0),
+                            hintText: 'جستجو در عنوان، دسته یا مبلغ...',
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(
+                              fontFamily: 'Lalezar',
+                              fontSize: 15,
+                              color: Constans.textSecondary.withValues(
+                                alpha: 0.8,
+                              ),
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontFamily: 'Lalezar',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 18.0,
+                            color: Constans.textPrimary,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.search,
-                    color: Constans.textPrimary.withValues(alpha: 0.8),
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    Icon(
+                      Icons.search,
+                      color: Constans.textPrimary.withValues(alpha: 0.8),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1473,6 +1539,7 @@ class _TransactionsscreenState extends State<Transactionsscreen> {
         !t.isSms || !_smsDefaultCategoryNames.contains(t.category);
 
     return GestureDetector(
+      key: _isFirstVisible(t) ? _firstRowKey : null,
       behavior: HitTestBehavior.opaque,
       onTap: () => _openDetailSheet(t),
       onLongPress: () => _confirmDelete(t),
