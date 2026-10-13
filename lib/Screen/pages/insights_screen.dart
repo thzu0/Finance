@@ -13,6 +13,10 @@ import 'package:finance/widget/glass_box_widget.dart';
 import 'package:finance/widget/spending_donut_chart.dart';
 import 'package:flutter/material.dart';
 
+import 'package:finance/widget/app_tour.dart';
+import 'package:finance/widget/tab_notifier.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+
 enum _Period { week, month, year }
 
 class _PeriodData {
@@ -117,6 +121,10 @@ class _InsightsscreenState extends State<Insightsscreen> {
   static const double _barAreaHeight = 130;
 
   final _s = AppSettings.instance;
+  final _tabsKey = GlobalKey();
+  final _summaryKey = GlobalKey();
+  final _chartKey = GlobalKey();
+  final _categoriesKey = GlobalKey();
 
   _Period _period = _Period.week;
 
@@ -130,12 +138,63 @@ class _InsightsscreenState extends State<Insightsscreen> {
     if (mounted) setState(() {});
   }
 
+  void _onTabChanged() {
+    if (activeTab.value == 3) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
+    }
+  }
+
+  Future<void> _maybeStartTour() async {
+    if (!mounted || activeTab.value != 3 || _s.tourSeen('insights')) return;
+    for (var i = 0; i < 20 && (_loading || _current == null); i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+    if (!mounted || activeTab.value != 3) return;
+
+    final hasData = _current != null && _current!.categories.isNotEmpty;
+
+    AppTour.showOnce(
+      context,
+      page: 'insights',
+      seen: _s.tourSeen('insights'),
+      isMounted: () => mounted,
+      markSeen: () => _s.setTourSeen('insights'),
+      steps: [
+        TourStep(
+          _tabsKey,
+          'بازه‌ی زمانی',
+          'تحلیل خرج‌هات رو برای این هفته، این ماه یا امسال ببین.',
+        ),
+        TourStep(
+          _summaryKey,
+          'مقایسه با دوره‌ی قبل',
+          'اینجا می‌بینی نسبت به هفته، ماه یا سال قبل بیشتر خرج کردی یا کمتر.',
+        ),
+        TourStep(
+          _chartKey,
+          'نمودار خرج',
+          'روی هر ستون بزن تا مبلغ همون روز یا ماه رو ببینی.',
+          align: ContentAlign.top,
+        ),
+        if (hasData)
+          TourStep(
+            _categoriesKey,
+            'دسته‌های پرخرج',
+            'نشون می‌ده بیشترین پولت توی این بازه به کدوم دسته‌ها رفته.',
+            align: ContentAlign.top,
+          ),
+      ],
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
     transactionsTicker.addListener(_load);
     _s.changes.addListener(_onSettings);
+    activeTab.addListener(_onTabChanged);
   }
 
   @override
@@ -143,6 +202,7 @@ class _InsightsscreenState extends State<Insightsscreen> {
     _tooltipTimer?.cancel();
     transactionsTicker.removeListener(_load);
     _s.changes.removeListener(_onSettings);
+    activeTab.removeListener(_onTabChanged);
     super.dispose();
   }
 
@@ -239,23 +299,32 @@ class _InsightsscreenState extends State<Insightsscreen> {
                     textDirection: TextDirection.rtl,
                     child: Column(
                       children: <Widget>[
-                        _buildTabBar(),
+                        KeyedSubtree(key: _tabsKey, child: _buildTabBar()),
                         const SizedBox(height: 25),
-                        _card(_buildSummary(d)),
+                        KeyedSubtree(
+                          key: _summaryKey,
+                          child: _card(_buildSummary(d)),
+                        ),
                         _sectionHeader('خرج ${d.tabLabel}'),
-                        _card(_buildBarChart(d)),
+                        KeyedSubtree(
+                          key: _chartKey,
+                          child: _card(_buildBarChart(d)),
+                        ),
                         _sectionHeader('دسته‌های پرخرج'),
-                        d.categories.isEmpty
-                            ? _card(
-                                Text(
-                                  'هنوز خرجی توی این بازه ثبت نشده',
-                                  style: glassText(
-                                    15,
-                                    color: Constans.textSecondary,
+                        KeyedSubtree(
+                          key: _categoriesKey,
+                          child: d.categories.isEmpty
+                              ? _card(
+                                  Text(
+                                    'هنوز خرجی توی این بازه ثبت نشده',
+                                    style: glassText(
+                                      15,
+                                      color: Constans.textSecondary,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : _card(_buildCategories(d)),
+                                )
+                              : _card(_buildCategories(d)),
+                        ),
                         _sectionHeader('پیشنهاد هوشمند'),
                         _card(_buildSuggestion(d)),
                         const SizedBox(height: 110),
