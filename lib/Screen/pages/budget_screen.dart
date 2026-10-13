@@ -10,9 +10,12 @@ import 'package:finance/extentions/extentions.dart';
 import 'package:finance/widget/form_widget.dart'; // showAmount , currencyName
 
 import 'package:finance/widget/glass_box_widget.dart';
+import 'package:finance/widget/tab_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart'; // برای کلاس Jalali
+import 'package:finance/widget/app_tour.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 // ==========================================
 // مدل بودجه‌ی هر دسته (فقط برای نمایش توی UI؛ دیتای واقعی از BudgetWithSpent میاد)
@@ -50,6 +53,10 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   static const Color _bad = Color(0xFFFF5470);
   static const Color _blue = Color(0xFF4C7DFF);
   static const double _warnThreshold = 0.8;
+  final _addKey = GlobalKey();
+  final _monthKey = GlobalKey();
+  final _summaryKey = GlobalKey();
+  final _firstCardKey = GlobalKey();
 
   // ماه انتخاب‌شده به‌صورت Jalali (چون budget_repository با سال/ماه شمسی کار می‌کنه)
   Jalali _selectedMonth = Jalali.now();
@@ -59,6 +66,55 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
   // وقتی تنظیمات (واحد پول، مخفی‌کردن مبالغ) عوض بشه، صفحه دوباره ساخته میشه
   void _onSettings() {
     if (mounted) setState(() {});
+  }
+
+  void _maybeStartTour() async {
+    if (!mounted || _s.tourSeen('budgets')) return;
+    // صبر می‌کنیم لود تموم بشه و ویجت‌ها ساخته بشن
+    for (var i = 0; i < 20 && _loading; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+    if (!mounted) return;
+
+    AppTour.showOnce(
+      context,
+      page: 'budgets',
+      seen: _s.tourSeen('budgets'),
+      isMounted: () => mounted,
+      markSeen: () => _s.setTourSeen('budgets'),
+      steps: [
+        TourStep(
+          _addKey,
+          'افزودن بودجه',
+          'از اینجا برای یه دسته‌بندی سقف خرج تعیین کن؛ ماهانه یا برای یه بازه‌ی دلخواه.',
+        ),
+        TourStep(
+          _monthKey,
+          'انتخاب ماه',
+          'با این فلش‌ها بین ماه‌ها جابه‌جا شو و بودجه‌ی هر ماه رو ببین.',
+        ),
+        TourStep(
+          _summaryKey,
+          'خلاصه‌ی بودجه',
+          'مجموع سقف‌ها، مقدار خرج‌شده و باقی‌مونده اینجا جمع می‌شه.',
+        ),
+        if (_budgets.isNotEmpty)
+          TourStep(
+            _firstCardKey,
+            'کارت هر دسته',
+            'رنگ نوار نشون می‌ده وضعیتت چطوره: سبز خوب، زرد نزدیک سقف، قرمز ردشده. برای ویرایش یا حذف، روی کارت بزن.',
+            align: ContentAlign.top,
+          ),
+      ],
+    );
+  }
+
+  void _onTabChanged() {
+    if (activeTab.value == 2) {
+      // یه فریم صبر کن تا صفحه کامل نمایش داده بشه
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStartTour());
+    }
   }
 
   List<_Budget> _budgets = [];
@@ -72,6 +128,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     budgetsTicker.addListener(_load);
     transactionsTicker.addListener(_load);
     _s.changes.addListener(_onSettings);
+    activeTab.addListener(_onTabChanged);
   }
 
   @override
@@ -79,6 +136,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
     budgetsTicker.removeListener(_load);
     transactionsTicker.removeListener(_load);
     _s.changes.removeListener(_onSettings);
+    activeTab.removeListener(_onTabChanged);
     super.dispose();
   }
 
@@ -147,6 +205,7 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
           padding: const EdgeInsets.only(left: 16),
           child: Center(
             child: GlassBox(
+              key: _addKey,
               height: 44,
               width: 44,
               radius: 14,
@@ -195,13 +254,23 @@ class _BudgetsscreenState extends State<Budgetsscreen> {
                     textDirection: TextDirection.rtl,
                     child: Column(
                       children: <Widget>[
-                        _buildMonthSelector(),
+                        KeyedSubtree(
+                          key: _monthKey,
+                          child: _buildMonthSelector(),
+                        ),
                         const SizedBox(height: 14),
-                        _buildSummaryCard(),
+                        KeyedSubtree(
+                          key: _summaryKey,
+                          child: _buildSummaryCard(),
+                        ),
                         _buildAlertBanner(),
                         _buildSectionHeader(),
                         if (_budgets.isEmpty) _buildEmptyState(),
-                        for (final b in _budgets) _buildCategoryCard(b),
+                        for (var i = 0; i < _budgets.length; i++)
+                          KeyedSubtree(
+                            key: i == 0 ? _firstCardKey : null,
+                            child: _buildCategoryCard(_budgets[i]),
+                          ),
                         const SizedBox(height: 110),
                       ],
                     ),

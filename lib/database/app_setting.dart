@@ -11,6 +11,27 @@ class AppSettings {
   Map<String, dynamic> _data = {};
   File? _file;
 
+  // ───── آموزش (tour) ─────
+  bool tourSeen(String page) => get<bool>('tour_seen_$page', false);
+
+  Future<void> setTourSeen(String page, [bool seen = true]) =>
+      set('tour_seen_$page', seen);
+
+  /// برای «نمایش دوباره‌ی آموزش»
+  Future<void> resetAllTours() async {
+    for (final p in const [
+      'home',
+      'transactions',
+      'budgets',
+      'insights',
+      'profile',
+    ]) {
+      _data['tour_seen_$p'] = false;
+    }
+    changes.value++;
+    await _file?.writeAsString(jsonEncode(_data));
+  }
+
   Future<void> load() async {
     final dir = await getApplicationDocumentsDirectory();
     _file = File('${dir.path}/settings.json');

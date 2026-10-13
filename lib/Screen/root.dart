@@ -5,6 +5,7 @@ import 'package:finance/Screen/pages/profile_screen.dart';
 import 'package:finance/Screen/pages/transactions_screen.dart';
 import 'package:finance/Screen/pages/home_screen.dart';
 import 'package:finance/widget/custom_bottm_nav_widget.dart';
+import 'package:finance/widget/tab_notifier.dart';
 import 'package:flutter/material.dart';
 
 class RootPage extends StatefulWidget {
@@ -42,9 +43,10 @@ class _RootPageState extends State<RootPage> {
       extendBody: true,
       body: IndexedStack(index: bottomIndex, children: screen()),
       bottomNavigationBar: CustomBottomNav(
-        onTap: (index) => setState(() {
-          bottomIndex = index;
-        }),
+        onTap: (index) {
+          activeTab.value = index;
+          setState(() => bottomIndex = index);
+        },
       ),
     );
   }
