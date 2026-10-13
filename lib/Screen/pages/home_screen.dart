@@ -17,6 +17,9 @@ import 'package:finance/widget/app_tour.dart';
 import 'package:finance/widget/tab_notifier.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
+import 'dart:io';
+import 'package:finance/services/avatar_service.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -169,11 +172,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 16, right: 15),
-                child: GlowAvatar(
-                  imageProvider: AssetImage('assets/images/profile.jfif'),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 15),
+                child: AvatarService.path != null
+                    ? GlowAvatar(
+                        imageProvider: FileImage(File(AvatarService.path!)),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF4C7DFF), Color(0xFF7C5CFF)],
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 26,
+                          backgroundColor: const Color(0xFF0B1B4A),
+                          child: Icon(
+                            Icons.person,
+                            size: 28,
+                            color: Constans.textSecondary,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),

@@ -16,6 +16,11 @@ import 'package:finance/widget/app_tour.dart';
 import 'package:finance/widget/tab_notifier.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
+import 'dart:io';
+import 'package:finance/services/avatar_service.dart';
+import 'package:finance/widget/form_widget.dart';
+import 'package:image_picker/image_picker.dart';
+
 class _ProfileOption {
   final IconData icon;
   final String title;
@@ -105,6 +110,34 @@ class _ProfilescreenState extends State<Profilescreen> {
       _name = _s.get<String>('name', 'بدون نام');
       _email = _s.get<String>('email', 'email@example.com');
     });
+  }
+
+  Future<void> _changeAvatar() async {
+    final hasPhoto = AvatarService.path != null;
+    final i = await showGlassOptionSheet(
+      context,
+      title: 'عکس پروفایل',
+      options: [
+        const GlassOption(Icons.photo_library_outlined, 'انتخاب از گالری'),
+        const GlassOption(Icons.photo_camera_outlined, 'گرفتن عکس'),
+        if (hasPhoto) const GlassOption(Icons.delete_outline, 'حذف عکس'),
+      ],
+    );
+    if (i == null || !mounted) return;
+
+    try {
+      if (i == 0) {
+        await AvatarService.pick(ImageSource.gallery);
+      } else if (i == 1) {
+        await AvatarService.pick(ImageSource.camera);
+      } else {
+        await AvatarService.remove();
+      }
+    } catch (e) {
+      debugPrint('avatar failed: $e');
+      if (!mounted) return;
+      showGlassSnack(context, 'انتخاب عکس ناموفق بود');
+    }
   }
 
   @override
@@ -264,13 +297,48 @@ class _ProfilescreenState extends State<Profilescreen> {
                 colors: [Color(0xFF4C7DFF), Color(0xFF7C5CFF)],
               ),
             ),
-            child: CircleAvatar(
-              radius: 45,
-              backgroundColor: const Color(0xFF0B1B4A),
-              backgroundImage: widget.avatar,
-              child: widget.avatar == null
-                  ? Icon(Icons.person, size: 40, color: Constans.textSecondary)
-                  : null,
+            child: GestureDetector(
+              onTap: _changeAvatar,
+              child: Stack(
+                children: [
+                  Builder(
+                    builder: (_) {
+                      final path = AvatarService.path;
+                      final ImageProvider? img = path != null
+                          ? FileImage(File(path))
+                          : widget.avatar;
+                      return CircleAvatar(
+                        radius: 45,
+                        backgroundColor: const Color(0xFF0B1B4A),
+                        backgroundImage: img,
+                        child: img == null
+                            ? Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Constans.textSecondary,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF4C7DFF),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 16),
