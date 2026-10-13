@@ -22,7 +22,7 @@ class _AppsettingsscreenState extends State<Appsettingsscreen> {
   final _s = AppSettings.instance;
 
   late int _currency = _s.get<int>('currency', 0); // 0 = تومان ، 1 = ریال
-  int _language = 0; // 0 = فارسی ، 1 = English  (فعلاً فقط UI)
+ 
   late int _digits = _s.get<int>('digits', 0); // 0 = فارسی ، 1 = انگلیسی
   late bool _hideAmounts = _s.get<bool>('hide_amounts', false);
   late bool _haptic = _s.get<bool>('haptic', true);
