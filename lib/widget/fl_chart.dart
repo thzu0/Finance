@@ -46,30 +46,32 @@ class FlChart extends StatelessWidget {
               ),
 
               getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  final point = points[spot.x.toInt()];
-                  return LineTooltipItem(
-                    '\u200F${formatJalali(point.date)}\n', // ← \u200F اضافه شد
-                    TextStyle(
-                      fontFamily: 'Lalezar',
-                      fontSize: 12,
-                      color: Colors.white,
-                    ),
-                    children: [
-                      TextSpan(
-                        text:
-                            '\u200F${formatAmount(point.balance.round())} تومان', // ← اینجا هم
-                        style: TextStyle(
-                          fontFamily: 'Vazirmatn',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Constans.electricBlue,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList();
-              },
+  return touchedSpots.map((spot) {
+    final point = points[spot.x.toInt()];
+    final amountText = showAmount(point.balance.round());
+    final unitText = amountsHidden ? '' : ' $currencyName';
+
+    return LineTooltipItem(
+      '\u200F${formatJalali(point.date)}\n',
+      TextStyle(
+        fontFamily: 'Lalezar',
+        fontSize: 12,
+        color: Colors.white,
+      ),
+      children: [
+        TextSpan(
+          text: '\u200F$amountText$unitText',
+          style: TextStyle(
+            fontFamily: 'Vazirmatn',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Constans.electricBlue,
+          ),
+        ),
+      ],
+    );
+  }).toList();
+},
             ),
           ),
           lineBarsData: [
