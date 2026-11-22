@@ -18,7 +18,3 @@ const Map<String, IconData> kIconMap = {
 /// اسم رشته‌ای → آیکون واقعی (برای نمایش توی UI)
 IconData iconFromName(String name) => kIconMap[name] ?? Icons.category_outlined;
 
-Color hexToColor(String hex) {
-  final h = hex.replaceAll('#', '');
-  return Color(int.parse('FF$h', radix: 16));
-}
